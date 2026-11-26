@@ -1,4 +1,5 @@
 import { useState, useEffect, useContext, useMemo, useRef, Fragment } from 'react';
+import { otHoursOfLog } from '../utils/otCost';
 import { orgValues, sortLike } from '../utils/listOrder';
 import { supabase } from '../supabaseClient';
 import { setMasterAuthUser } from '../utils/masterCache';
@@ -1200,8 +1201,8 @@ export default function Checkin() {
           const dateStr = `${exportMonth}-${String(d).padStart(2, '0')}`;
           const log = logs[dateStr];
           if (!log) return '';
-          // สูตรเดียวกับ Report.jsx: กะดึก OT = 2 ชม.เสมอ / กะเช้า OT = 2 ชม. (หรือ 5 ชม.ถ้ามี extended OT)
-          const hrs = !log.has_ot ? 0 : (log.shift === 'night' ? 2 : (log.has_extended_ot ? 5 : 2));
+          // ชั่วโมง OT = ของกลาง utils/otCost.js (26/11 — เดิมเขียน 2/5/2 ไว้ที่นี่ · บอร์ด Obeya แกน C ใช้ตัวเดียวกัน)
+          const hrs = otHoursOfLog(log);
           total += hrs;
           return hrs ? String(hrs) : '';
         });

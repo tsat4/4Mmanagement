@@ -18743,6 +18743,21 @@ const EN = {
   'ตกทอดจากระดับแม่/โรงงาน': 'Inherited from parent/plant',
   'อ่านอย่างเดียว · ไม่นับน้ำหนักของใบนี้': 'read-only · not counted in this sheet\'s weight',
   'แก้เป้า/น้ำหนักที่ขอบเขตนั้น': 'edit target/weight at that scope',
+  /* ── Obeya แกน C ค่า OT (26/11) ── */
+  'เครื่องหยุดนอกแผน + ของเสีย + ค่า OT': 'Unplanned downtime + defects + OT cost',
+  'OT ประมาณ': 'OT est.',
+  'ค่า OT = ชม. OT จากเช็คชื่อ × ค่าแรงมาตรฐาน × ตัวคูณตามปฏิทิน (วันทำงาน 1.5 · วันหยุด 1.5/2) · ประมาณการให้เห็นภาพ ไม่ใช่ต้นทุนบัญชี': 'OT cost = OT hours from check-in × standard wage × calendar multiplier (workday 1.5 · holiday 1.5/2) · an estimate for awareness, not accounting cost',
+  'วันหยุดที่ไม่มีใบจอง OT คิด 8 ชม.': 'holidays without an OT booking counted as 8 h',
+  'วันหยุดในโหมดปีคิด 8 ชม./คน': 'holidays in year mode counted as 8 h/person',
+  'ตั้งค่าแรงมาตรฐาน OT (บาท/ชม.) — ตัวเดียวทั้งโรงงาน · ประมาณการให้หน้างานเห็นภาพ': 'Set the standard OT wage (THB/h) — one figure for the whole plant · an estimate so the floor sees the cost',
+  'ตั้งค่าแรง OT': 'Set OT wage',
+  'ค่า OT': 'OT cost',
+  'กรอกค่าแรงเป็นตัวเลข ≥ 0': 'Enter the wage as a number ≥ 0',
+  'ค่าแรงมาตรฐาน OT': 'Standard OT wage',
+  'บาท/ชม. แล้ว': 'THB/h saved',
+  'ตัวเลขเดียวทั้งโรงงาน ใช้คิด "ค่า OT" บนแกน C: ชม. OT จากเช็คชื่อ × ค่าแรงนี้ × ตัวคูณตามปฏิทิน (วันทำงาน 1.5 · วันหยุด 1.5/2)': 'One figure for the whole plant, used for "OT cost" on axis C: OT hours from check-in × this wage × calendar multiplier (workday 1.5 · holiday 1.5/2)',
+  'ประมาณการเพื่อให้หน้างานเห็นภาพ ไม่ใช่ต้นทุนบัญชี': 'An estimate so the floor sees the cost, not an accounting figure',
+  'บาท / ชั่วโมง': 'THB / hour',
 };
 
 export default EN;
