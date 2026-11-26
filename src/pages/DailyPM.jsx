@@ -12,7 +12,8 @@ import { loadDailyAm, amShiftInfo, dailyAmLineStatus, amModeNote } from '../lib/
 // 🔧 B3 — ป้ายสถานะใบซ่อมต้องมาจาก moStatusLabel() ที่เดียว ห้ามแต่งเองในหน้า
 import { moStatusLabel } from '../utils/mtnStepPerm'
 import { invalidateTable } from '../utils/masterInvalidate'
-import { loadPmTeams, isAmTeam } from '../utils/pmTeams'
+import { loadPmTeams, isAmTeam, pmTeamsSync } from '../utils/pmTeams'
+import { ownerTeamOf } from '../utils/sharedEquipment'   // เจ้าของหัวเครื่อง (แบบ ก. 26/11)
 import { checkWriteRows } from '../utils/dbWrite'
 import LineSelect, { scopeLines as pickerLines } from '../components/LineSelect' // dropdown ไลน์ = <LineSelect> เท่านั้น (single-source audit 2026-09-07)
 import { lineScope } from '../utils/sectionScope' // ขอบเขตไลน์ของบัญชี = ของกลางตัวเดียว (09/11)
@@ -213,6 +214,19 @@ export default function DailyPM() {
   // ใช้ทั้งเคสยังไม่ระบุไลน์ และเคสเลือกไลน์ผิดแล้วต้องย้าย
   const assignJigLine = async (jig, line_name) => {
     if (!canManage || !line_name || line_name === jig.line_name) return
+    /* 🔒 แบบ ก. (user 26/11 · utils/sharedEquipment.js) — ไลน์ = ข้อมูลตัวเครื่อง แก้ได้เฉพาะทีมที่ตั้งเครื่องนี้เป็นทีมแรก
+       เครื่องที่ช่าง (เช่น JIG MTN) ตั้งไว้ก่อน ⇒ จอ AM ย้ายไลน์ไม่ได้ (เหตุการณ์ 20/11 JHYD06-13 ถูกย้ายผิดไลน์) · อ่านไม่ได้ = ไม่ย้าย */
+    {
+      const rCl = await supabaseDR.from('checklists').select('id, department, created_at').eq('equipment_id', jig.id)
+      const owner = rCl.error ? null : ownerTeamOf(rCl.data)
+      if (rCl.error || (owner && !isAmTeam(owner))) {
+        setJigs(prev => [...prev])
+        toast.error(rCl.error
+          ? `${tr('อ่านไม่ได้ว่าทีมไหนเป็นเจ้าของเครื่องนี้ — ยังไม่ย้ายไลน์')}: ${rCl.error.message}`
+          : `${tr('ไลน์ของเครื่องนี้เป็นข้อมูลของทีม')} ${pmTeamsSync().find(t => t.key === owner)?.label ?? owner} — ${tr('ให้ทีมเจ้าของย้ายที่หน้าตั้งค่าจุดตรวจ')}`)
+        return
+      }
+    }
     // เขียน master ทันที → ต้องยืนยันก่อน (UI-CONVENTIONS §5.4) · ยกเลิก = ไม่แตะ DB, select กลับค่าเดิมจาก state
     const movedRegPreview = targets.some(t => t.jig_id === jig.id)
     const ok = await askConfirm(

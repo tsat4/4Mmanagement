@@ -34,3 +34,25 @@ test('deleteMode: นับไม่ได้ = ห้ามลบ · มีแ�
   assert.equal(deleteMode(2, null), 'view');
   assert.equal(deleteMode(0, null), 'equipment');
 });
+
+import { ownerTeamOf, canEditIdentity } from '../sharedEquipment.js';
+
+test('แบบ ก.: เจ้าของ = ทีมที่ตั้งใบตรวจเป็นทีมแรก', () => {
+  const rows = [
+    { id: 'b', department: 'production', created_at: '2026-11-19T09:50:21Z' },
+    { id: 'a', department: 'jig_maintenance', created_at: '2026-09-08T09:14:51Z' },
+  ];
+  assert.equal(ownerTeamOf(rows), 'jig_maintenance');
+  assert.equal(ownerTeamOf([]), null);
+  assert.equal(canEditIdentity({ owner: 'jig_maintenance', department: 'production' }), false);
+  assert.equal(canEditIdentity({ owner: 'jig_maintenance', department: 'jig_maintenance' }), true);
+  assert.equal(canEditIdentity({ owner: null, department: 'production' }), true);
+  assert.equal(canEditIdentity({ owner: null, department: 'production', error: { message: 'x' } }), false);
+});
+
+test('แบบ ก.: ไม่ใช่ทีมเจ้าของ = ไม่เขียนหัวเครื่องเลย (แม้ช่องว่าง) แต่บอกว่าช่องไหนไม่ถูกบันทึก', () => {
+  const cur = { jig_no: 'JHYD06-13', line_name: 'LASER-345', model: null };
+  const { patch, blocked } = identityPatch({ cur, orig: null, form: { jig_no: '', line_name: 'SUB APRON', model: 'P703' }, shared: true, canEdit: false });
+  assert.deepEqual(patch, {});
+  assert.deepEqual(blocked, ['jig_no', 'model', 'line_name']);
+});
