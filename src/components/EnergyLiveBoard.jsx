@@ -13,7 +13,7 @@ import { supabaseDR } from '../supabaseClient';
 import { usePolling } from '../utils/usePolling';
 import { RATE } from '../utils/refreshRates';
 import { bkkDateStr } from '../utils/workDate';
-import { buildLiveBoard, liveSeries, METER_OFFLINE_MIN, demandWindows, DEMAND_WINDOW_MIN, demandKwFromKwh } from '../utils/energy';
+import { buildLiveBoard, liveSeries, METER_OFFLINE_MIN, demandWindows, DEMAND_WINDOW_MIN, demandKwFromKwh, efFor, co2eKg, fmtTco2e } from '../utils/energy';
 import NoticeBar from './NoticeBar';
 import useIsMobile from '../utils/useIsMobile';
 import { fetchReadingsSince } from '../lib/energyReadings';
@@ -46,7 +46,8 @@ export default function EnergyLiveBoard() {
   const [err, setErr] = useState('');
   const [missing, setMissing] = useState(false);
   const [loaded, setLoaded] = useState(false);
-  const [panelCfg, setPanelCfg] = useState(null);   // { [panel]: { demand_target_kw } } · { err:true } = อ่านไม่ได้
+  const [panelCfg, setPanelCfg] = useState(null);
+  const [factors, setFactors] = useState(null);     // energy_emission_factors · null = ยังโหลด · { err } = อ่านไม่ได้   // { [panel]: { demand_target_kw } } · { err:true } = อ่านไม่ได้
   const [nowMs, setNowMs] = useState(() => Date.now());
   const cursor = useRef({ day: null, last: null });   // กราฟ: วันที่โหลดอยู่ + นาทีล่าสุดที่มีแล้ว
   const reqId = useRef(0);
@@ -79,6 +80,9 @@ export default function EnergyLiveBoard() {
           .select('scope_kind, scope_name, day, kwh, peak_kw, peak_at, resets').gte('day', monthStart),
         fetchReadingsSince(from, newDay, { kwh: true }),
       ]);
+      /* 🌱 EF ไฟฟ้า (ทะเบียนเดียวกับแท็บ "ค่าการปล่อย" · 25/11) — best-effort: อ่านไม่ได้ = การ์ด CO₂ เขียนบอก */
+      const fx = await supabaseDR.from('energy_emission_factors').select('utility_key, kg_co2e, effective_from, source_ref').eq('utility_key', 'electric');
+      if (id === reqId.current) setFactors(fx.error ? { err: true } : (fx.data || []));
       /* 🎯 เป้า Demand 15 นาทีต่อตู้ (energy_panel_settings · 25/11) — best-effort: อ่านไม่ได้ = การ์ดเขียนว่าอ่านเป้าไม่ได้ */
       const ps = await supabaseDR.from('energy_panel_settings').select('panel, demand_target_kw');
       if (id === reqId.current) setPanelCfg(ps.error ? { err: true } : Object.fromEntries((ps.data || []).map(x => [x.panel, x])));
@@ -133,6 +137,7 @@ export default function EnergyLiveBoard() {
   usePolling(load, RATE.METER);
 
   const today = bkkDateStr(nowMs);
+  const ef = Array.isArray(factors) ? efFor('electric', today.slice(0, 7), factors) : null;
   const board = useMemo(() => buildLiveBoard({ meters, live, daily, today, nowMs }), [meters, live, daily, today, nowMs]);
   const byKey = useMemo(() => new Map(board.meters.map(m => [m.key, m])), [board.meters]);
   const panelParam = params.get('panel') || '';
@@ -205,6 +210,17 @@ export default function EnergyLiveBoard() {
         <Kpi color={INFO} label={tr('ใช้ไฟวันนี้')} value={fmt(t.todayKwh)} unit="kWh" sub={tr('นับจากเลขมิเตอร์ ตั้งแต่ 00:00 น.')} />
         <Kpi color={INFO} label={tr('ใช้ไฟเดือนนี้')} value={fmt(t.monthKwh, 0)} unit="kWh"
           sub={t.avgPerDay != null ? `${tr("เฉลี่ยวันละ")} ${fmt(t.avgPerDay)} kWh (${t.monthDays} ${tr("วันที่มีข้อมูล")})` : tr("ยังไม่มีข้อมูลของเดือนนี้")} />
+        {/* 🌱 CO₂ วันนี้/เดือนนี้ (25/11 · คำสั่ง user) — kWh จากมิเตอร์ชั้นบนสุด × EF ของเดือนนี้ (efFor/co2eKg ที่เดียวกับแท็บรายเดือน)
+            ไม่มี EF / อ่านไม่ได้ = เขียนบอก ห้ามโชว์ 0 · แท็บรายเดือนใช้ยอดบิลเมื่อมี ⇒ ตัวเลขอาจต่างกัน (บอกบนการ์ด) */}
+        <Kpi color={GOOD} label={tr('CO₂ ที่ปล่อยวันนี้')} value={ef ? fmtTco2e(co2eKg(t.todayKwh, ef)) : '—'} unit="tCO₂e"
+          sub={factors?.err ? <span style={{ color: WARN }}>{tr('อ่านค่าการปล่อย (EF) ไม่ได้')}</span>
+            : !ef ? (factors == null ? '…' : <span style={{ color: WARN }}>{tr('ยังไม่ได้ตั้งค่าการปล่อย (EF) — แท็บค่าการปล่อย')}</span>)
+            : <>{tr('เดือนนี้')} <b>{fmtTco2e(co2eKg(t.monthKwh, ef))}</b> tCO₂e · EF {Number(ef.kg_co2e)} kgCO₂e/kWh
+                {/* แยกรายตู้ (25/11 · user เลือก "รวมทั้งโรงงาน + แยกรายตู้") — แต่ละตู้มาจากต้นทาง/ทีมต่างกัน เทียบจอ Node-RED ของทีมนั้นได้ */}
+                {board.panels.length > 1 && board.panels.map(p => (
+                  <div key={p.panel}>{tr('ตู้')} {p.panel}: {fmtTco2e(co2eKg(p.todayKwh, ef))} / {fmtTco2e(co2eKg(p.monthKwh, ef))} t <span style={{ color: 'var(--muted)' }}>({tr('วันนี้ / เดือนนี้')})</span></div>
+                ))}
+                <span style={{ color: 'var(--muted)' }}>{tr('รวมทุกตู้บนบอร์ด (Scope 2) · แท็บรายเดือนใช้ยอดบิลเมื่อมี')}</span></>} />
         <Kpi color={t.offline || t.never ? WARN : GOOD} label={tr('สถานะมิเตอร์')} value={t.online} unit={`/ ${t.total} ${tr("ออนไลน์")}`}
           sub={<><span style={{ color: WARN }}>{tr('ขาดการติดต่อ')} {t.offline}</span> · <span style={{ color: 'var(--muted)' }}>{tr('ยังไม่เคยส่ง')} {t.never}</span></>} />
         <Kpi color={t.alerts.length ? BAD : GOOD} label={tr('เกินลิมิตตอนนี้')} value={t.alerts.length} unit={tr("เครื่อง")}

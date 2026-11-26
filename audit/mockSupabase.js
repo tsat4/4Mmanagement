@@ -486,6 +486,19 @@ const TABLE_ROWS = {
      ถ้า mock ให้ note เดียวกันหมด ⇒ ทุกไลน์ได้สถานะ "ยังไม่เคยนับ" ⇒ สาย partial/done/driftAfter
      (ป้ายสถานะ · NoticeBar "ปรับยอดหลังนับ") **ไม่เคยถูกเรนเดอร์ใน harness เลย** — บทเรียนเดียวกับ mtn_orders
      คู่ (ไลน์, mat) ต้องตรงกับ line_stock_summary ไม่งั้นจับคู่ไม่ติดและยังเงียบเหมือนเดิม */
+  /* 🎴 ใบ e-Kanban — ต้องคละ **ทุกสถานะ** ไม่งั้นสาย in_box/picking/delivering + คิวหยิบของสโตร์
+     ไม่เคยถูกเรนเดอร์ใน harness · ต้องมีใบ "ไม่รู้โซน" (from_location ว่าง) ด้วย
+     ไม่งั้น NoticeBar "ยังไม่รู้โซนหยิบ" ไม่เคยขึ้น (2026-11-25) */
+  kanban_cards: (r, i) => ({ ...r,
+    card_no: `1010${1000 + (i % 8)}-${String((i % 4) + 1).padStart(2, '0')}`,
+    mat_no: `1010${1000 + (i % 8)}`, line_name: LINE_NAME((i % 3) + 1),
+    from_location: i % 5 === 0 ? null : `P4${10 + (i % 3)}`,
+    qty_per_card: 600, seq: (i % 4) + 1, total_cards: 4,
+    state: ['at_line', 'in_box', 'picking', 'delivering'][i % 4],
+    state_at: '2026-11-25T02:00:00Z',
+    suggested_at: i % 4 === 0 && i % 2 === 0 ? '2026-11-25T03:00:00Z' : null,
+    suggest_reason: i % 4 === 0 && i % 2 === 0 ? 'ผลิตไปแล้ว 600 ชิ้น ตั้งแต่ใบนี้ถึงไลน์' : null,
+    is_active: true }),
   line_stock_transactions: (r, i) => {
     /* 2 แถวต่อ 1 คู่ (ไลน์, mat) — คู่เดียวกับที่ line_stock_summary สร้าง (index j)
        ไม่งั้น "การนับ" กับ "แถวสต็อก" คนละคู่กัน ⇒ จับคู่ไม่ติด แล้วทุกไลน์ได้ "ยังไม่เคยนับ" เหมือนเดิม */
@@ -750,6 +763,8 @@ const TABLE_ROWS = {
     const k = Math.floor(i / 2);
     return { ...r, scope_kind: 'zone', scope_name: i % 2 ? 'MDB-10' : 'MDB', bucket_at: new Date(t).toISOString(), kw: 900, kw_max: 980, kwh_total: (i % 2 ? 5000 : 1000) + k * 15 };
   },
+  /* 🌱 EF ไฟฟ้า (2026-11-25 · ห้ามถอด) — เดิมไม่มี utility_key ⇒ efFor() ไม่เจอ = การ์ด CO₂ บนบอร์ด + แท็บรายเดือนวาดแต่กิ่ง "ยังไม่ได้ตั้ง" */
+  energy_emission_factors: (r, i) => ({ ...r, utility_key: 'electric', kg_co2e: i % 2 ? 0.493 : 0.482, effective_from: i % 2 ? '2023-11-28' : '2026-10-21', source_ref: 'TGO (mock)' }),
   energy_panel_settings: (r, i) => ({ ...r, panel: i % 2 ? 'MDB-03' : 'MDB', demand_target_kw: i % 2 ? null : 1600 }),
   integration_sources: (r, i) => ({
     ...r, kinds: i % 2 ? ['energy_readings', 'energy_events'] : ['machine_state', 'piece_count'],
