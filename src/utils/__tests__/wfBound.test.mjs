@@ -47,7 +47,9 @@ test('BOUND_SUBJECTS ตรงกับ wf_bound_subjects() ตัวล่า�
   const sql = readFileSync(join(dir, files[files.length - 1]), 'utf8');
   const body = sql.slice(sql.indexOf('create or replace function public.wf_bound_subjects()'));
   for (const s of BOUND_SUBJECTS) {
-    const re = new RegExp(`"${s.subject}":\\s*\\{"label": "${s.label}", "record_perm": "${s.recordPerm}", "link": "${s.link.replace(/[?]/g, '\\?')}", "doc_key": ${s.docKey ? `"${s.docKey}"` : 'null'}\\}`);
+    const rx = (v) => String(v).replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const q = (v) => (v == null ? 'null' : `"${rx(v)}"`);
+    const re = new RegExp(`"${s.subject}":\\s*\\{"label": ${q(s.label)}, "record_perm": ${q(s.recordPerm)}, "link": ${q(s.link)}, "doc_key": ${q(s.docKey)}\\}`);
     assert.ok(re.test(body), `migration ${files[files.length - 1]} ต้องลงทะเบียน ${s.subject} ให้ตรงกับจอ`);
   }
 });
