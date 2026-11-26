@@ -1,7 +1,7 @@
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { MoreMark } from './InfoMore';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { NAV_ITEMS, STICKY_TAB_GROUPS, FULL_STICKY_GROUPS, inNavGroup } from '../App';
+import { NAV_ITEMS, FULL_STICKY_GROUPS, inNavGroup } from '../App';
 import { useNavSubItemsStore } from '../utils/navSubItems';   // 🗂️ Detail Bar = รายการที่หน้าประกาศตอนรัน (พื้นที่ SAP)
 import { useMergeParams } from '../utils/useTabParam';   // 🗂️ 24/11 หน้าที่แท็บย้ายไปเป็นข้อย่อยในแผงเมนู
 import useIsMobile from '../utils/useIsMobile';
@@ -204,7 +204,11 @@ export default function PageHeader({
      · ไม่เข้าเงื่อนไข = ไม่มี style เพิ่มเลย (หน้าอื่นเหมือนเดิมเป๊ะ) */
   /* 🗜️ 24/11 (คำสั่ง user) เงื่อนไขเดียวกันนี้ = "หัวเพจกะทัดรัด" ด้วย: ไม่มี breadcrumb · ไม่มีคำบรรยาย (`sub`) ·
      ชื่อหน้าอยู่บนสุด · แถบแท็บแถวเดียว (ล้น = ปุ่ม ◀ ▶) · ปุ่ม 🔍 ท้ายแถบ (`HeaderSearch`) */
-  const compact = !inHub && !isMobile && !filters && !!navItem && inNavGroup(navItem, STICKY_TAB_GROUPS);
+  /* 🧩 26/11 (คำสั่ง user "ทำหน้าอื่นด้วย ให้เหมือนกัน" — เลือกแบบกะทัดรัดเป็นมาตรฐาน): หัวเพจกะทัดรัดใช้กับ **ทุกหน้าเดี่ยวบนจอคอม**
+     ไม่ผูกหมวดเมนูอีกแล้ว (เดิมเฉพาะ `STICKY_TAB_GROUPS` ⇒ แผน-สโตร์หน้าตาต่างจากหน้าอื่น) · มือถือ/hub ไม่แตะ
+     · หน้าที่มี `filters=` = กะทัดรัดเหมือนกัน แต่ **ไม่ตรึง** (ค้างแค่แถบแท็บทำไม่ได้เมื่อมีแถบกรองใต้แท็บ — เงื่อนไขเดิม 24/11) และไม่มีปุ่ม 🔍 (แถบกรองมีช่องค้นหาของตัวเอง) */
+  const compact = !inHub && !isMobile && !!navItem;
+  const compactSticky = compact && !filters;
   /* 🗂️ 26/11 (คำสั่ง user "แท็บอยู่ในหน้า · เมนูเป็นทางเข้า") — หน้าที่อยู่ในทะเบียน `NAV_SUB_TABS` **ยังวาดแถบแท็บในหน้าเสมอ**
      ข้อย่อยในแผงเมนูเป็น *ทางลัด* เข้าแท็บ (กดจากที่อื่นแล้วตกถึงแท็บนั้นเลย) ไม่ใช่ตัวสลับแท็บ
      — รอบ 24/11 เคยซ่อนแถบแท็บของหน้าพวกนี้ ⇒ สลับแท็บต้องเปิดแผง 2–3 คลิก และคนไม่เห็นว่าหน้านี้มีแท็บอะไรอีก (ถอดแล้ว · ด่าน `tabs-stay-in-page`) */
@@ -214,17 +218,17 @@ export default function PageHeader({
      · แถวเดียว + ◀ ▶ เมื่อล้น (`TabBar scroller`) · ตรึงบนตอนเลื่อนจอ + ปุ่ม 🔍 ท้ายแถบ */
   const navLive = useNavSubItemsStore();
   const setUrl = useMergeParams();
-  const detail = compact ? (navLive[`${pathname}|${tab ?? ''}`] || null) : null;
+  const detail = compactSticky ? (navLive[`${pathname}|${tab ?? ''}`] || null) : null;
   const detailItems = detail && detail.items.length ? detail.items : null;
   const detailCur = detailItems ? (new URLSearchParams(search).get(detail.query) || '') : '';
   /* 📌 ค้างทั้งก้อน (25/11 หมวดกิจกรรม · `FULL_STICKY_GROUPS`) — Header + Detail Bar + Tool Bar ค้างที่ขอบบน top:0
      (ไม่ใช่ top ติดลบแบบ "ค้างเฉพาะแถบ") · ต้องอยู่ในโหมดกะทัดรัดอยู่แล้ว */
-  const fullSticky = compact && inNavGroup(navItem, FULL_STICKY_GROUPS);
-  const sticky = compact && (!!topTabs.length || !!detailItems || fullSticky);
+  const fullSticky = compactSticky && inNavGroup(navItem, FULL_STICKY_GROUPS);
+  const sticky = compactSticky && (!!topTabs.length || !!detailItems || fullSticky);
   /* 🧰 Tool Bar (25/11) — ปุ่มคำสั่งชุดมาตรฐาน ตำแหน่งตายตัวขวาสุดของแถว Detail Bar (ลำดับ ค้นหา · เพิ่ม · แก้ไข · ลบ)
      · หน้าส่ง `tools=[{ key:'search'|'add'|'edit'|'delete', label, onClick, disabled }]` · ไม่ส่ง = ไม่มี (ปุ่ม 🔍 แบบเดิม)
      · ลำดับเรียงตาม `TOOL_ORDER` เสมอ ไม่ว่าหน้าส่งมาลำดับไหน (ผู้ใช้จำตำแหน่งได้ — คำสั่ง user) */
-  const toolBar = compact && tools && tools.length ? <ToolBar tools={tools} /> : null;
+  const toolBar = compactSticky && tools && tools.length ? <ToolBar tools={tools} /> : null;
   const rootRef = useRef(null);
   const [stickTop, setStickTop] = useState(0);
   useLayoutEffect(() => {
@@ -247,7 +251,7 @@ export default function PageHeader({
     <>
       {/* 24/11: โหมดกะทัดรัด = แถวเดียว + ปุ่ม ◀ ▶ เมื่อล้น + ปุ่มค้นหาท้ายแถบ */}
       <TabBar className="ph-chrome" tabs={topTabs} value={topValue} onChange={onTop} audit
-        {...(sticky ? { scroller: true, after: <HeaderSearch rootRef={rootRef} tabKey={String(tab)} /> } : null)} />
+        {...(compact ? { scroller: true, ...(sticky ? { after: <HeaderSearch rootRef={rootRef} tabKey={String(tab)} /> } : null) } : null)} />
       {activeGroup && (
         <div data-subtab="1" className="ph-chrome" style={{ marginTop: -4 }}>
           <TabBar size="sm" tabs={activeGroup.children} value={tab} onChange={onTab} />
@@ -338,7 +342,7 @@ export default function PageHeader({
             ตัวกรองต้องอยู่ `filters` ⇒ ลงใต้แถบแท็บเสมอ (UI-STANDARD §2 ลำดับแนวตั้ง · stdsweep ตรวจ data-ph) */}
         {actions && <div data-ph="actions" style={{ display: 'flex', flexWrap: 'wrap', gap: 7, alignItems: 'center' }}>{actions}</div>}
         {/* 🔍 หัวเพจกะทัดรัดที่ไม่มีแถบแท็บในหน้า = ปุ่มค้นหาอยู่ท้ายแถวชื่อหน้า (มีแถบแท็บ = อยู่ท้ายแถบแท็บ) */}
-        {compact && !sticky && !detailItems && (toolBar || <HeaderSearch rootRef={rootRef} tabKey={String(tab ?? '')} />)}
+        {compactSticky && !sticky && !detailItems && (toolBar || <HeaderSearch rootRef={rootRef} tabKey={String(tab ?? '')} />)}
       </div>
       )}
 
