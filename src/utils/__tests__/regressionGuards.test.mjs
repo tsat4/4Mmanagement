@@ -13134,3 +13134,18 @@ test('🖼️ jig-frames-no-dup — loadDeptFrames ต้องกันค่�
     + '   ฟังก์ชันนี้ต่อผล 2 คิวรีของ jig_images ⇒ ต้องการันตี id ไม่ซ้ำที่ตัวเอง\n'
     + '   (ผู้เรียกใน PMSetup/PMCheckData ใช้ `im.id` เป็น React key)\n');
 });
+
+/* 🚫 ใบรวมสถานี AM ห้ามมีจุดชิม/งาน PM (26/11 · คำสั่ง user "สถานีจะใช้แค่กับ am ไม่ยุ่งกับ pm, shim record
+   เพราะ shim record เป็นงานของส่วนช่าง") + ใบเดี่ยวของทีม AM ดูค่าชิมได้อย่างเดียว
+   คลาสเดียวกับบั๊ก 26/11 "AM ไปแก้ข้อมูลของ JIG MTN" (รูปเครื่องปนแผนก) */
+test('🛡️ am-station-no-shim — ใบรวมสถานี AM ไม่อ่าน/เขียนจุดชิม · ใบ AM บันทึกค่าชิมไม่ได้', () => {
+  const src = stripComments(readFileSync(join(ROOT, 'src/pages/PMCheckData.jsx'), 'utf8'));
+  const a = src.indexOf('function AmStationSheet('), b = src.indexOf('export default function PMCheckData(');
+  assert.ok(a > 0 && b > a, 'หา AmStationSheet ไม่เจอ');
+  const station = src.slice(a, b);
+  for (const bad of ['recordShimEvent', 'fixture_points', 'ShimRecordSection', 'shimPins']) {
+    assert.ok(!station.includes(bad), `\n\n❌ ใบรวมสถานี AM มี "${bad}" — สถานีเป็นงาน AM ล้วน ห้ามแตะจุดชิม (งานของทีมช่าง)\n`);
+  }
+  assert.match(src, /const canShim = can\('fixture_shim', 'record', userRole\) && !shimAmReadOnly/,
+    '\n\n❌ ใบ AM (ใบเดี่ยว) กรอก/บันทึกค่าชิมได้อีกแล้ว — ต้องดูได้อย่างเดียว (shimAmReadOnly = isAmTeam(department))\n');
+});
