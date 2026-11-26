@@ -556,3 +556,5 @@ OPEN=1 node audit/colorsweep.mjs DailyReport  # กางแผงที่ห�
 — `var(--green)14` **parse ไม่ได้ = เบราว์เซอร์ทิ้งทั้งบรรทัด declaration** พื้น/ขอบหายเงียบๆ
 ⇒ ใช้ `--x-dim` (พื้น 12%) / `--x-line` (เส้น 40%) แทน · มีด่าน `no-var-alpha-hex` ใน `regressionGuards`
 (ไฟล์ที่ใช้ท่านี้อยู่ 30 ไฟล์ — **ยังไม่แปลง** รอทำทีละไฟล์พร้อมเปลี่ยนเป็น `-dim`/`-line`)
+
+- `?wfgrid=1` (26/11) — `wf_defs` คืนใบงานตัวอย่าง `bbs_grid` (ช่อง checkgrid) ⇒ `WfGridSheet` วาดตารางจริง · ไม่ใส่ = สาขา "ใบงานยังไม่เปิดใช้" · ดูจอ BBS ธ.ค. ต้องตั้งนาฬิกา (`page.clock.setFixedTime`) เป็น ธ.ค. 2569 ขึ้นไป
