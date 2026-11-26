@@ -5,6 +5,7 @@ import { Link, Navigate, useSearchParams } from 'react-router-dom'
 import { useMergeParams } from '../utils/useTabParam'
 import { motion, AnimatePresence } from 'framer-motion'
 import { supabase, supabaseDR } from '../supabaseClient'
+import { loadDeptFrames } from '../utils/jigFrames'   // รูปเครื่องแยกตามแผนก (26/11)
 import { UserContext } from '../App'
 import { lineScope } from '../utils/sectionScope'   // 🔒 แท็บ AM เห็นเฉพาะไลน์ของตัวเอง (11/11)
 import { can, isActionSeeded } from '../utils/permissions'
@@ -1119,11 +1120,12 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
           const ngHist = await loadNgHistory(jig).catch(e => ({ byCp: {}, machine: null, error: String(e?.message || e) }))
           list.push({ jig, checklistId: cl?.id ?? null, cps: data ?? [], ngHist })
         }
-        const imgRes = await supabaseDR.from('jig_images').select('id, jig_id, image_path, sort').in('jig_id', memberJigs.map(j => j.id)).order('sort')
+        // รูปแยกตามแผนก (26/11 · utils/jigFrames.js) — เห็นเฉพาะชุดรูปของทีม AM นี้
+        const imgRes = await loadDeptFrames(memberJigs.map(j => j.id), amDept)
         if (!alive) return
         const fmap = {}
         for (const j of memberJigs) {
-          let fr = (imgRes.data ?? []).filter(im => im.jig_id === j.id).map(im => ({ id: im.id, url: getPublicUrl(im.image_path) }))
+          let fr = (imgRes.rows ?? []).filter(im => im.jig_id === j.id).map(im => ({ id: im.id, url: getPublicUrl(im.image_path) }))
           if (!fr.length && j.image_path) fr = [{ id: 'legacy', url: getPublicUrl(j.image_path) }]
           fmap[j.id] = fr
         }
@@ -1906,7 +1908,8 @@ export default function PMCheckData({ mode = 'pm' }) {
         .then(({ data, error }) => { if (!live()) return; if (error) toast.error(`${tr("โหลดจุดชิมไม่สำเร็จ")}: ${error.message}`); setShimPoints(data ?? []) })
     } else setShimPoints([])
     // เฟรมรูป 360° (ถ้าไม่มี jig_images → ใช้รูปหลัก image_path เป็นเฟรมเดียว)
-    supabaseDR.from('jig_images').select('id, image_path, sort').eq('jig_id', selectedJig.id).order('sort').then(({ data, error }) => {
+    // รูปแยกตามแผนก (26/11 · utils/jigFrames.js) — เห็นเฉพาะชุดรูปของแผนกที่กำลังตรวจ
+    loadDeptFrames([selectedJig.id], department).then(({ rows: data, error }) => {
       if (!live()) return
       if (error) toast.error(`${tr("โหลดรูปเครื่องไม่สำเร็จ")}: ${error.message}`)
       let fr = (data ?? []).map(im => ({ id: im.id, url: getPublicUrl(im.image_path) }))
