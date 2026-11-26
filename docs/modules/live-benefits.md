@@ -64,6 +64,7 @@
 - เพิ่ม `paper_basis='quarter'` + `multi_skill` = quarter ต่อไลน์ · OJT นับอยู่แล้ว (รายเรื่อง — ใบละครั้งที่อบรม)
 
 ## ยังไม่ทำ (เฟสถัดไป)
+- **ใบประเมินทักษะรายคน (`individual_skill`) = รอบ 3 เดือนเช่นกัน (user ยืนยัน 26/11) แต่ user สั่ง "พักไว้ก่อน ขอดูของจริงก่อน"** — ยังเป็น `event` ไม่นับสด · ทำเมื่อ user สั่ง (เปลี่ยนเป็น `quarter` + บล็อกนับ คน × ไตรมาส)
 - นับสดฟอร์มรายเรื่องที่เหลือ: `material_request` · `pm_coordination` · `ot_booking` · `ot_compensation_report` · `morning_meeting` ·
   `mkt_production_*` · `individual_skill` (จัดรอบแล้ว ขึ้นป้าย "ยังนับสดไม่ได้")
 - แยก MO 2 ฟอร์มรายฟอร์ม (ต้องย้ายกฎ `isMtnFormRow` ไปฝั่ง SQL หรือเก็บธงฟอร์มในแถว)
