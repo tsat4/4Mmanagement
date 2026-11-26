@@ -12,7 +12,7 @@
 
    ใช้:  <TabBar tabs={[{ key, label, badge?, title? }]} value={tab} onChange={setTab} />
          <TabBar size="sm" … />   // แถบในหน้า (13px)
-         <TabBar scroller after={<ปุ่ม/>} … />   // 24/11: จอคอมแถวเดียว ล้นแล้วมีปุ่ม ◀ ▶ เลื่อน · `after` = ของท้ายแถบ (นอกกล่องเลื่อน)
+         <TabBar scroller after={<ปุ่ม/>} … />   // 24/11: แถวเดียว (25/11 ทุกขนาดจอ) ล้นแล้วมีปุ่ม ◀ ▶ เลื่อน · `after` = ของท้ายแถบ (นอกกล่องเลื่อน)
          · ใช้โดย PageHeader โหมดหัวเพจกะทัดรัด (หมวดใน `STICKY_TAB_GROUPS`) · ไม่ส่ง `scroller` = แบบเดิมเป๊ะ */
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import useIsMobile from '../utils/useIsMobile';
@@ -76,7 +76,7 @@ export default function TabBar({ tabs, value, onChange, size, audit = false, cla
      🔴 โครง DOM ต้องนิ่ง: มือถือ = wrapper เสมอ (ไม่ใช่ "มี wrapper เฉพาะตอนล้น") — ไม่งั้นกล่องเลื่อนถูกสร้างใหม่ตอนสลับ
      แล้ว listener/ResizeObserver ค้างอยู่กับ element เก่าที่ถูกถอด (วัดได้ 0 ⇒ ขอบจางหายทันทีที่เริ่มเลื่อน · เจอจริง 18/11)
      จอคอม overflow visible ⇒ คืน root เดิมเป๊ะ ไม่มี wrapper (desktopdiff 0) */
-  const deskScroll = scroller && !isMobile;
+  const deskScroll = scroller;   // 25/11 (คำสั่ง user "เหมือนจอคอม") — มือถือ/จอแคบก็แถวเดียว + ◀ ▶ แบบเดียวกัน
   const bar = (
     <div ref={scrollRef} className={deskScroll ? 'tabbar-scroller' : (isMobile ? undefined : className)}
       style={{ overflowX: hscroll ? 'auto' : 'visible', paddingTop: 2, paddingBottom: 2, ...(deskScroll ? { flex: 1, minWidth: 0 } : null), ...(isMobile || deskScroll ? null : style) }}>

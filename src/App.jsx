@@ -1308,7 +1308,7 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
                           borderTop: i === 0 ? 'none' : '1px solid var(--border)',
                         }}>{tr(navSubOf(item, group))}</div>
                       )}
-                      {navRow(item, group, onClose)}
+                      {subNav(item, group, onClose) /* 25/11 มือถือ: ข้อย่อย (แท็บของหน้า) เหมือนแผงจอคอม */}
                     </div>
                   ))}
                 </div>
