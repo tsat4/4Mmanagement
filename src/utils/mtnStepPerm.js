@@ -971,6 +971,28 @@ export function canCancelReportedMo(order = {}, opts = {}) {
   return !!can('report');   // ต้องเป็นคนที่แจ้งซ่อมได้อยู่แล้ว (ฝ่ายที่แจ้ง)
 }
 
+/**
+ * ⏳ ใครเติม "รายละเอียดใบที่ระบบเปิดให้ตอนกดเรียกช่าง" ได้
+ *
+ * 25/11 · คำสั่ง user: *"ใครก็เพิ่มได้หรอ ควรจะเป็นผู้แจ้งกับหัวหน้าแผนกผู้แจ้งเท่านั้นสิ"*
+ * เดิมเช็คแค่ `can('report')` = **ทุกคนที่แจ้งซ่อมได้ทั้งโรงงาน** แก้ใบของแผนกอื่นได้
+ * ⇒ ใบนี้คือ "อาการที่ฝ่ายที่แจ้งเห็นกับตา" — คนนอกกรอกแทน = ข้อมูลที่ช่างใช้วินิจฉัยเป็นของมั่ว
+ *
+ * ① ผู้แจ้งเอง (ชื่อตรงกับใบ)
+ * ② หัวหน้าของฝ่ายที่แจ้ง — ฝั่ง reporter + ใบอยู่ในขอบเขตที่ตัวเองดูแล + ตำแหน่งถึงเกณฑ์
+ * 🔴 **ไม่รู้ฝั่ง/ขอบเขต/ตำแหน่ง = ไม่ให้ (fail-closed)** — หลักเดียวกับ `canCancelReportedMo()`
+ */
+export function canFillMoDetails(order = {}, opts = {}) {
+  const { can = () => false, fullName = '', actorSide = 'unknown', posRank = null, inReporterScope = null } = opts;
+  if (!isMoOpen(order)) return false;
+  if (!can('report')) return false;                                     // ต้องเป็นฝ่ายที่แจ้งซ่อมได้อยู่แล้ว
+  if (isOrderReporter(order, fullName)) return true;                    // ① เจ้าของใบ
+  if (actorSide !== 'reporter' && actorSide !== 'both') return false;   // ② ต้องอยู่ฝั่งผู้แจ้ง
+  if (inReporterScope !== true) return false;
+  if (posRank == null || posRank < HANDOVER_MIN_RANK) return false;
+  return true;
+}
+
 /** ผู้ใช้คนนี้ "ถอนใบของตัวเอง" ได้ไหม — ไม่รู้ชื่อ = false (ไม่รู้ ≠ ใช่) */
 export function canCancelOwnMo(order = {}, { fullName = '' } = {}) {
   if (!isMoOpen(order)) return false;
@@ -1140,21 +1162,41 @@ export function canSkipQa(opts = {}) {
   return { ok: false, code: 'qa_only' };
 }
 
+/* ═══ 🪪 "ตอนนี้คุณใช้บัญชีอะไร" — ขึ้นเฉพาะตอนที่ "ตัวบัญชี" คือประเด็น ═══════════════
+   ที่มา (23/11): ผจก.กดเซ็นไม่ได้ ไล่ตรวจสิทธิ์/ตำแหน่ง/ขอบเขตกันทั้งวัน สุดท้าย **เขาเข้าผิดบัญชี**
+   ⇒ เพิ่มบรรทัดบอกชื่อบัญชีที่กำลังใช้ ให้เอะใจได้เอง
+
+   🔴 **แต่ 25/11 user ทักว่าใส่พร่ำเพรื่อแล้วกลับงง** (เคสจริง: ช่อง "รอ ผจก.ส่วนซ่อมบำรุงรับทราบ"
+      ที่ระบุชื่อช่างไว้คนละคน ขึ้นว่า *"ช่องนี้เป็นของ ผจก. ทีมที่รับใบนี้"* แล้วตามด้วยชื่อ**คนที่กำลังดู**)
+      — *"ถ้างานที่ไม่ได้เกี่ยวข้องกับบัญชีที่ล็อกอินอยู่ แต่มาแจ้งเป็นชื่อเจ้าของบัญชี เค้าจะสับสนมั้ย
+         ว่าช่องนี้เกี่ยวอะไรกับเค้า ทำไมมีชื่อเค้า"*
+   ⇒ **กฎ: ขึ้นได้เฉพาะโค้ดที่ข้อความของมันพูดถึง "บัญชีนี้" อยู่แล้ว**
+      (บัญชีกลาง · ตำแหน่งต่ำกว่าเกณฑ์ · นอกขอบเขตที่ตัวเองดูแล · ปฏิเสธแบบไม่ระบุเหตุ)
+      **ห้ามขึ้นกับโค้ดที่บอกว่า "ช่องนี้เป็นของฝั่ง/ทีมอื่น"** (`other_team` · `wrong_side`)
+      หรือโค้ดที่เป็นเรื่องของ**ใบ** (`already_signed` · `await_mgr_approval` · `not_waiting_qa` …)
+      — ชื่อเราในช่องของคนอื่น = จอโกหกว่าช่องนั้นเกี่ยวกับเรา
+   🔴 ไม่รู้ชื่อ = ไม่ใส่บรรทัดนี้ (ห้ามขึ้น "บัญชี —")
+   ใช้ที่: `stepDenyHint()` (ไฟล์นี้) + กล่องลายเซ็น/รับทราบใน `MtnRepair.jsx` — **ห้ามเขียนเงื่อนไขเองในหน้า** */
+export const ACCOUNT_HINT_CODES = Object.freeze(['shared_account', 'rank_too_low', 'out_of_scope', 'denied']);
+
+/** โค้ดปฏิเสธนี้ควรตามด้วย "บัญชีที่กำลังใช้" ไหม */
+export function showsAccountHint(code) {
+  return ACCOUNT_HINT_CODES.includes(String(code || ''));
+}
+
+/** บรรทัดบอกบัญชีที่กำลังใช้ — ไม่รู้ชื่อคืน `null` */
+export function accountHintLine(actorName) {
+  const nm = String(actorName || '').trim();
+  return nm ? `🪪 บัญชีที่กำลังใช้อยู่ตอนนี้: “${nm}” — ถ้านี่ไม่ใช่บัญชีของคุณ ให้ออกจากระบบแล้วเข้าใหม่ด้วยบัญชีตัวเอง` : null;
+}
+
 /**
  * ข้อความบอกเหตุผลเมื่อทำไม่ได้ (UI-CONVENTIONS §6.9 — ซ่อนปุ่มได้ ห้ามซ่อนเหตุผล)
  * คืนเป็นโครงสร้าง ไม่ใช่ JSX — ให้หน้าจอวาดเอง
  */
 export function stepDenyHint(step, { teamName = '', reporterName = '', outOfScope = false, otherTeam = false, orderLine = '', orderSection = '', mtnForm = false, toolTeam = false, awaitApproval = null, wrongSide = false, rankTooLow = false, sharedAccount = false, assumed = [], actorName = '' } = {}) {
   const meta = stepMeta(step, { mtnForm, toolTeam });
-  /* 🪪 **บอกชื่อบัญชีที่กำลังใช้อยู่** (23/11 · คำสั่ง user) — เคสจริงวันนั้น: ผจก.กดเซ็นไม่ได้
-     ไล่ตรวจสิทธิ์/ตำแหน่ง/ขอบเขตกันทั้งวัน สุดท้าย **เขาเข้าผิดบัญชี**
-     ข้อความเดิมบอกแค่ "เซ็นช่องนี้ไม่ได้" ⇒ ไม่มีอะไรชวนให้เอะใจว่าตัวเองอยู่ผิดบัญชี
-     🔴 ขึ้นเฉพาะด่านที่เป็นเรื่อง "ตัวตนของคนกด" (ฝั่ง · ตำแหน่ง · ขอบเขต · บัญชีกลาง)
-        ด่านที่เป็นเรื่องของ**ใบ** (รออนุมัติก่อนเริ่มงาน · ทีมอื่น) ไม่เกี่ยวกับว่าใครกด — ใส่ไปก็รก
-     🔴 ไม่รู้ชื่อ = ไม่ใส่บรรทัดนี้ (ห้ามขึ้น "บัญชี —") */
-  const whoAmI = String(actorName || '').trim()
-    ? `🪪 ตอนนี้คุณใช้บัญชี “${String(actorName).trim()}” — ถ้าไม่ใช่บัญชีของคุณ ให้ออกจากระบบแล้วเข้าใหม่ด้วยบัญชีตัวเอง`
-    : null;
+  const whoAmI = accountHintLine(actorName);
   if (sharedAccount && meta) {
     return [`ช่อง “${meta.title}” เป็นลายเซ็นของ${meta.whoShort || 'ผู้มีตำแหน่ง'} — บัญชีกลางเซ็นแทนไม่ได้ ให้เจ้าของตำแหน่ง login ด้วยบัญชีของตัวเอง`,
       ...(whoAmI ? [whoAmI] : [])];
@@ -1167,7 +1209,6 @@ export function stepDenyHint(step, { teamName = '', reporterName = '', outOfScop
     lines.push(meta.side === 'reporter'
       ? 'ช่องนี้เป็นของ **ฝ่ายที่แจ้ง** (เจ้าของค่าใช้จ่าย) — ฝั่งช่างเซ็นแทนไม่ได้ ตามใบ MO ฉบับกระดาษที่แยกช่องเซ็นไว้'
       : 'ช่องนี้เป็นของ **ฝั่งซ่อมบำรุง** — ฝ่ายที่แจ้งเซ็นแทนไม่ได้ ตามใบ MO ฉบับกระดาษที่แยกช่องเซ็นไว้');
-    if (whoAmI) lines.push(whoAmI);
     lines.push('ถ้าคุณอยู่ฝั่งนั้นจริง แปลว่าบัญชีนี้ยังตั้งข้อมูลไม่ตรง — ให้ admin แก้ “🔧 ทีมช่างซ่อม” หรือ “ส่วนงาน” ที่ /add-user');
     return lines;
   }

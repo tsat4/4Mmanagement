@@ -27,7 +27,7 @@ import { can, canDelete, isActionSeeded, isSharedAccount } from '../utils/permis
 import { ackWaitsOnMe } from '../utils/myQueue';   // ✍️ กฎ "ใบนี้รอเราเซ็นรับทราบไหม" ที่เดียว (23/11)
 import { confirmSign, needsSignConfirm } from '../utils/signConfirm';
 import { moTimeline } from '../utils/mtnTimeline';   // ⏱️ 4 ช่วงของไลน์หยุด (คำศัพท์ชุดเดียวของระบบ)
-import { MO_DONE_STATUSES, MO_STATUS_META as STATUS_META, QA_NOT_RELATED, QA_RELATED, QA_SKIP_REASON_STEP4, canBounceBack, canDoStep, canHandoff, canSignMtnApproval, canSkipQa, isMoOpen, isOrderReporter, isQaSkipped, isWaitingQa, lastStep, orderReporterText, nextStepOf, moQaState, mtnCloseStage, moStatusLabel, moStatusMeta, orderInReporterScope, stageOf, stepDenyHint, stepLabel, stepMeta, moFlow, moWaitMeta, qaRelatedView, moRemoveMode, canCancelOwnMo, canCancelReportedMo, MO_REMOVE_BLOCKED, MO_REMOVE_CANCEL, MO_REMOVE_DELETE, actorSideOf, stepAssumptions, assumptionHint } from '../utils/mtnStepPerm';
+import { MO_DONE_STATUSES, MO_STATUS_META as STATUS_META, QA_NOT_RELATED, QA_RELATED, QA_SKIP_REASON_STEP4, canBounceBack, canDoStep, canHandoff, canSignMtnApproval, canSkipQa, isMoOpen, isOrderReporter, isQaSkipped, isWaitingQa, lastStep, orderReporterText, nextStepOf, moQaState, mtnCloseStage, moStatusLabel, moStatusMeta, orderInReporterScope, stageOf, stepDenyHint, stepLabel, stepMeta, moFlow, moWaitMeta, qaRelatedView, moRemoveMode, canCancelOwnMo, canCancelReportedMo, MO_REMOVE_BLOCKED, MO_REMOVE_CANCEL, MO_REMOVE_DELETE, actorSideOf, stepAssumptions, assumptionHint, showsAccountHint, canFillMoDetails } from '../utils/mtnStepPerm';
 import { positionRank } from '../utils/positions';
 import { findOpenOnMachine, dupLevel } from '../utils/mtnDuplicate';
 /* 🔢 เลข MO ออกยังไง — ต้องตรงกับ RPC `mtn_assign_mo_no` เป๊ะ (14/10 · ห้ามเดารูปแบบเองในหน้า) */
@@ -1358,6 +1358,15 @@ const HANDOFF_CAP = 2000;
       {tab === 'master' && can('mtn_repair', 'manage_master', role) && <MasterTab {...cp} fullName={fullName} />}
 
       {showReport && <ReportModal {...cp} onClose={() => setShowReport(false)} onSaved={() => { setShowReport(false); loadOrders(); }} />}
+      {/* `detail` = ใบเต็ม (fetchFullOrder) และถูกรีเฟรชโดย reloadAll — เดิมหยิบแถวจาก `orders`
+          ซึ่งตอนนี้เป็นคอลัมน์ย่อแล้ว ห้ามกลับไป `orders.find(...)` */}
+      {detail && <DetailDrawer order={detail} {...cp}
+        onClose={() => setDetail(null)} onStep={(step, editMode, extra) => setStepModal({ step, editMode, ...(extra || {}), order: detail })} />}
+      /* 🔼 25/11 (user: "กดละ popup ไห้ใส่รายละเอียดไปขึ้นด้านหลัง ต้องปิดก่อนและคอยเห็น")
+         โมดัลนี้กับ DetailDrawer ใช้ `zIndex: 3000` เท่ากัน ⇒ **ตัวที่อยู่หลังใน DOM ทับ**
+         เดิมวางไว้ "ก่อน" DetailDrawer ⇒ ใบ MO ทับฟอร์มทุกครั้ง
+         🔴 ห้ามแก้ด้วยการดัน zIndex — ของกลางทั้งแอปใช้ 3000 ชั้นเดียว (UI §6.20)
+            โมดัลที่เปิดทับโมดัลต้องวางหลังตัวที่มันทับเสมอ */
       {/* ⏳ เพิ่มรายละเอียดใบที่ระบบเปิดให้ตอนกดเรียกช่าง (13/11 · คำสั่ง user "มาใส่ย้อนหลังได้")
           🔴 ฟอร์มเดียวกับแจ้งซ่อมใหม่ + ตัวตรวจชุดเดียวกัน + **รูปก่อนซ่อมบังคับเหมือนเดิม**
              (คำสั่ง user 08/11 — ใบที่มาจาก downtime ต้องมีรูปให้ช่างเห็นอาการ)
@@ -1372,10 +1381,6 @@ const HANDOFF_CAP = 2000;
         }}
         onClose={() => setFillOrder(null)}
         onSaved={() => { setFillOrder(null); reloadAll(); }} />}
-      {/* `detail` = ใบเต็ม (fetchFullOrder) และถูกรีเฟรชโดย reloadAll — เดิมหยิบแถวจาก `orders`
-          ซึ่งตอนนี้เป็นคอลัมน์ย่อแล้ว ห้ามกลับไป `orders.find(...)` */}
-      {detail && <DetailDrawer order={detail} {...cp}
-        onClose={() => setDetail(null)} onStep={(step, editMode, extra) => setStepModal({ step, editMode, ...(extra || {}), order: detail })} />}
       {stepModal && <StepModal {...cp} step={stepModal.step} order={stepModal.order} editMode={stepModal.editMode} skipQa={!!stepModal.skipQa}
         onClose={() => setStepModal(null)} onSaved={() => {
           setStepModal(null); reloadAll();
@@ -2687,8 +2692,12 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
   /* 🪪 23/11 (คำสั่ง user) — ทุกข้อความ "เซ็นช่องนี้ไม่ได้" ต้องบอกชื่อบัญชีที่กำลังใช้อยู่
      เคสจริงวันนั้น: ผจก.กดไม่ได้ ไล่ตรวจสิทธิ์/ตำแหน่ง/ขอบเขตกันทั้งวัน สุดท้าย **เข้าผิดบัญชี**
      🔴 ไม่รู้ชื่อ = ไม่ขึ้นบรรทัดนี้ (ห้ามขึ้น "บัญชี —") */
+  /* 🪪 บรรทัด "บัญชีที่กำลังใช้" — 🔴 โชว์เฉพาะโค้ดที่ `showsAccountHint()` อนุญาต
+     (25/11 · user: *"ช่องนี้ตรงที่บอกว่าใช้บัญชีอะไร มันดูตลก … งานที่ไม่เกี่ยวกับบัญชีที่ล็อกอินอยู่
+     แต่มาแจ้งเป็นชื่อเจ้าของบัญชี เค้าจะสับสนมั้ย ว่าช่องนี้เกี่ยวอะไรกับเค้า ทำไมมีชื่อเค้า"*)
+     เจ้าของกฎอยู่ `utils/mtnStepPerm.js` **ห้ามเขียนเงื่อนไขเองที่นี่** */
   const whoAmILine = String(fullName || '').trim()
-    ? `🪪 ${trI18n('ตอนนี้คุณใช้บัญชี')} “${String(fullName).trim()}” — ${trI18n('ไม่ใช่บัญชีคุณ? ออกจากระบบแล้วเข้าใหม่')}`
+    ? `🪪 ${trI18n('บัญชีที่กำลังใช้อยู่ตอนนี้')}: “${String(fullName).trim()}” — ${trI18n('ถ้านี่ไม่ใช่บัญชีของคุณ ให้ออกจากระบบแล้วเข้าใหม่')}`
     : null;
   const posRank = positionRank(myPosition);
   const [showHist, setShowHist] = useState(false);   // 📜 ประวัติการซ่อมของเครื่องในใบนี้ (19/10)
@@ -3454,7 +3463,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
                       wrong_side: 'ช่องนี้เป็นของฝั่งซ่อมบำรุง',
                       other_team: 'ช่องนี้เป็นของ ผจก. ทีมที่รับใบนี้',
                     })[ack.code] || trI18n("รับทราบได้เฉพาะ ผจก. ที่ถูกระบุในใบ หรือผู้ถือสิทธิ์อนุมัติ")}
-                      {whoAmILine && <span style={{ display: 'block', marginTop: 2 }}>{whoAmILine}</span>}</span>}
+                      {whoAmILine && showsAccountHint(ack.code) && <span style={{ display: 'block', marginTop: 2 }}>{whoAmILine}</span>}</span>}
                 {ack.ok && posRank == null && <span style={{ fontSize: 11, color: 'var(--amber)' }}>⚠️ {trI18n("บัญชีนี้ยังไม่ได้ตั้งตำแหน่ง — ระบบไม่ได้ตรวจระดับ")}</span>}
               </div>
             )}
@@ -3492,7 +3501,8 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
                   out_of_scope: `${trI18n("ใบนี้เป็นของ")}${[o.line_name, o.dept_section].filter(Boolean).join(' · ') || trI18n('ส่วนงานอื่น')} — ${trI18n("เซ็นได้เฉพาะใบในขอบเขตที่ตัวเองรับผิดชอบ")}`,
                 })[canSignMtnApproval(appr.missing[0], stepCtx).code]
                 || trI18n("เซ็นได้เฉพาะผู้จัดการที่ถูกระบุในใบ หรือผู้ถือสิทธิ์อนุมัติปิดใบ")
-              }{whoAmILine && <span style={{ display: 'block', marginTop: 2 }}>{whoAmILine}</span>}</span>
+              }{whoAmILine && showsAccountHint(canSignMtnApproval(appr.missing[0], stepCtx).code)
+                && <span style={{ display: 'block', marginTop: 2 }}>{whoAmILine}</span>}</span>
             )}
             {appr.missing.length > 0 && canSignMtnApproval(appr.missing[0], stepCtx).ok && !signatureUrl && <span style={{ fontSize: 11, color: 'var(--accent2)', alignSelf: 'center' }}>{trI18n('ยังไม่มีลายเซ็นในโปรไฟล์ — จะบันทึกเป็นชื่อ+เวลา (ตั้งลายเซ็นได้ที่มุมขวาบน)')}</span>}
           </div>
@@ -3522,7 +3532,15 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
           <NoticeBar tone="warn" style={{ marginBottom: 10 }}>
             <b>{trI18n('ใบนี้เปิดให้อัตโนมัติตอนกดเรียกช่าง')}</b> — {trI18n('ยังไม่มีใครใส่รายละเอียด')}
             {known && missing.length ? <> · {trI18n('ขาด')}: <b>{missing.join(' · ')}</b></> : null}
-            {onFillDetails && can('mtn_repair', 'report', role) && (
+            {/* 🔒 25/11 (user "ใครก็เพิ่มได้หรอ ควรจะเป็นผู้แจ้งกับหัวหน้าแผนกผู้แจ้งเท่านั้นสิ")
+                   เกณฑ์อยู่ `canFillMoDetails()` ใน mtnStepPerm.js — ห้ามเขียนเงื่อนไขเองที่นี่
+                   🔴 ซ่อนปุ่มได้ ห้ามซ่อนเหตุผล (UI §6.9) */}
+            {onFillDetails && !canFillMoDetails(o, stepCtx) && (
+              <span style={{ marginLeft: 10, fontSize: 11.5, color: 'var(--muted)' }}>
+                {trI18n('เพิ่มรายละเอียดได้เฉพาะผู้แจ้ง หรือหัวหน้าของฝ่ายที่แจ้ง')}
+              </span>
+            )}
+            {onFillDetails && canFillMoDetails(o, stepCtx) && (
               <button type="button" onClick={() => onFillDetails(o)}
                 style={{ marginLeft: 10, padding: '3px 12px', fontSize: 12, fontWeight: 700, cursor: 'pointer',
                          borderRadius: 'var(--ctl-r)', border: '1px solid var(--amber)',
