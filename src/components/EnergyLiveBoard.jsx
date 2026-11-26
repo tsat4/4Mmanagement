@@ -7,13 +7,13 @@
    ⚠️ ไม่รู้ = "—" ห้ามโชว์ 0 · "ไม่เคยได้รับค่า" ≠ "ขาดการติดต่อ" ≠ "ค่าเป็น 0"
    ⚠️ egress: กราฟเส้นโหลดทั้งวันครั้งเดียว แล้วรอบถัดไปดึงเฉพาะนาทีที่ใหม่กว่า (RATE.METER)
    🔍 คลิกการ์ด/กล่องในผังจ่ายไฟ = หน้ารายตู้ `?meter=<ชื่อตู้>` (EnergyMeterDetail · คนละ param กับ `?tab=`) */
-import { useState, useCallback, useMemo, useRef } from 'react';
+import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { supabaseDR } from '../supabaseClient';
 import { usePolling } from '../utils/usePolling';
 import { RATE } from '../utils/refreshRates';
-import { bkkDateStr } from '../utils/workDate';
-import { buildLiveBoard, liveSeries, METER_OFFLINE_MIN, demandWindows, DEMAND_WINDOW_MIN, demandKwFromKwh, efFor, co2eKg, fmtTco2e } from '../utils/energy';
+import { bkkDateStr, addDaysStr } from '../utils/workDate';
+import { buildLiveBoard, liveSeries, METER_OFFLINE_MIN, demandWindows, DEMAND_WINDOW_MIN, demandKwFromKwh, efFor, co2eKg, fmtTco2e, windowAvgKw, baselineCompare } from '../utils/energy';
 import NoticeBar from './NoticeBar';
 import useIsMobile from '../utils/useIsMobile';
 import { fetchReadingsSince } from '../lib/energyReadings';
@@ -84,7 +84,7 @@ export default function EnergyLiveBoard() {
       const fx = await supabaseDR.from('energy_emission_factors').select('utility_key, kg_co2e, effective_from, source_ref').eq('utility_key', 'electric');
       if (id === reqId.current) setFactors(fx.error ? { err: true } : (fx.data || []));
       /* 🎯 เป้า Demand 15 นาทีต่อตู้ (energy_panel_settings · 25/11) — best-effort: อ่านไม่ได้ = การ์ดเขียนว่าอ่านเป้าไม่ได้ */
-      const ps = await supabaseDR.from('energy_panel_settings').select('panel, demand_target_kw');
+      const ps = await supabaseDR.from('energy_panel_settings').select('panel, demand_target_kw, baseline_start, baseline_end');
       if (id === reqId.current) setPanelCfg(ps.error ? { err: true } : Object.fromEntries((ps.data || []).map(x => [x.panel, x])));
       // เครื่องใต้ตู้ — best-effort: ตารางยังไม่ apply / อ่านไม่ได้ = การ์ดไม่มีรายชื่อเครื่อง (ตัวเลขยังขึ้นปกติ)
       const mm = await supabaseDR.from('energy_meter_machines').select('scope_kind, scope_name, machines(machine_no, line_name)');
@@ -256,6 +256,7 @@ export default function EnergyLiveBoard() {
         </div>
       )}
       {shownPanel && <DemandCard panel={shownPanel} readings={readings} nowMs={nowMs} today={today} cfg={panelCfg} />}
+      {shownPanel && <BaselineCard panel={shownPanel} readings={readings} nowMs={nowMs} today={today} cfg={panelCfg} />}
       {shownPanel && <TreeFlow key={shownPanel.panel} panel={shownPanel} byKey={byKey} onOpen={openMeter} />}
 
       {/* ── การ์ดรายเครื่อง ── */}
@@ -634,6 +635,92 @@ function DemandCard({ panel, readings, nowMs, today, cfg }) {
       </div>
       <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
         {tr('คิดจากส่วนต่างเลขมิเตอร์ (kWh) ของมิเตอร์ชั้นบนสุดของตู้ — บิลการไฟฟ้าคิดจากมิเตอร์ของการไฟฟ้า ตัวเลขอาจต่างเล็กน้อย')}
+      </div>
+    </div>
+  );
+}
+
+/** 🍱 Baseline ช่วงพัก ของตู้ที่เลือก (26/11 · คำสั่ง user · แบบการ์ด "Baseline พักเที่ยง" ของ Node-RED)
+ *  ช่วงเวลา = energy_panel_settings.baseline_start/end · ตัวเลขจาก windowAvgKw()/baselineCompare() — ไฟล์นี้วาดอย่างเดียว
+ *  วันนี้ใช้รายนาทีที่บอร์ดโหลดอยู่แล้ว · 3 วันก่อนดึงเฉพาะ "จุดขอบช่วง" (4 นาทีก่อนเริ่ม/ก่อนจบ) — egress น้อย
+ *  🔴 ไม่ตัดสินสีดี/เสีย (ยังไม่มีเกณฑ์ % ในทะเบียน — ห้ามเดา) · วันก่อนที่ขาดข้อมูลไม่นับ + บอกว่าเฉลี่ยกี่วัน */
+const BASELINE_DAYS = 3;
+function BaselineCard({ panel, readings, nowMs, today, cfg }) {
+  const c = cfg && !cfg.err ? cfg[panel.panel] : null;
+  const start = c?.baseline_start ? String(c.baseline_start).slice(0, 5) : null;
+  const end = c?.baseline_end ? String(c.baseline_end).slice(0, 5) : null;
+  const roots = useMemo(() => panel.roots.map(m => m.name), [panel]);
+  const all = useMemo(() => panel.meters.map(m => m.name), [panel]);
+  const allKey = all.join('|');
+  const msOf = (day, hm) => Date.parse(`${day}T${hm}:00+07:00`);
+  const days = useMemo(() => Array.from({ length: BASELINE_DAYS }, (_, i) => addDaysStr(today, -(i + 1))).filter(Boolean), [today]);
+  const daysKey = days.join('|');
+  /* 3 วันก่อน — ดึงจุดขอบช่วงครั้งเดียวต่อ ตู้/วัน/ช่วง (ข้อมูลอดีตไม่เปลี่ยน) */
+  const [prev, setPrev] = useState(null);           // null = ยังโหลด · { err } · { rows }
+  useEffect(() => {
+    if (!start || !end || !allKey) return undefined;
+    let alive = true;
+    setPrev(null);
+    const ranges = daysKey.split('|').flatMap(d => [msOf(d, start), msOf(d, end)])
+      .map(t => `and(bucket_at.gte.${new Date(t - 4 * 60000).toISOString()},bucket_at.lt.${new Date(t).toISOString()})`);
+    supabaseDR.from('energy_readings').select('scope_name, bucket_at, kwh_total')
+      .eq('scope_kind', 'zone').in('scope_name', allKey.split('|')).or(ranges.join(',')).limit(1000)
+      .then(({ data, error }) => { if (alive) setPrev(error ? { err: error.message } : { rows: data || [] }); });
+    return () => { alive = false; };
+  }, [allKey, daysKey, start, end]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  if (!c || !start || !end) {
+    return (
+      <div style={{ ...card, fontSize: 12.5, color: 'var(--muted)' }}>
+        <b style={{ color: 'var(--text)' }}>Baseline · {tr('ตู้')} {panel.panel}</b> — {cfg?.err ? tr('อ่านค่าตั้งของตู้ไม่ได้') : tr('ยังไม่ได้ตั้งช่วง baseline (แท็บตั้งค่าตู้)')}
+      </div>
+    );
+  }
+  const s0 = msOf(today, start);
+  const before = nowMs < s0;
+  const calc = (rd, names, day) => windowAvgKw({ readings: rd, names, startMs: msOf(day, start), endMs: msOf(day, end) });
+  const prevFor = (names) => (prev?.rows ? days.map(d => calc(prev.rows, names, d).kw) : []);
+  const tot = before ? null : calc(readings, roots, today);
+  const totCmp = baselineCompare(tot?.kw ?? null, prevFor(roots));
+  const pctTxt = (p) => (p == null ? '' : ` (${p >= 0 ? '+' : ''}${fmt(p, 0)}%)`);
+  return (
+    <div style={{ ...card, borderLeft: `4px solid ${INFO}` }}>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 8, flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>Baseline {tr('ช่วงพัก')} · {tr('ตู้')} {panel.panel}</div>
+        <div style={{ fontSize: 12, color: 'var(--muted)' }}>({start}–{end})</div>
+      </div>
+      <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap', alignItems: 'flex-start', marginTop: 6 }}>
+        <div style={{ minWidth: 220, flex: '1 1 260px' }}>
+          <div style={{ fontSize: 28, fontWeight: 800, color: 'var(--text)', lineHeight: 1.1 }}>
+            {fmt(tot?.kw)} <span style={{ fontSize: 13, fontWeight: 500, color: 'var(--muted)' }}>kW {tr('วันนี้')}{tot?.partial ? ` · ${tr('ยังไม่จบช่วง')} (${tot.minutes} ${tr('นาที')})` : ''}</span>
+          </div>
+          <div style={{ fontSize: 12.5, color: 'var(--text2)', lineHeight: 1.6, marginTop: 4 }}>
+            {before && <span style={{ color: 'var(--muted)' }}>{tr('วันนี้ยังไม่ถึงช่วง')} · </span>}
+            {tot?.missing?.length > 0 && <span style={{ color: WARN }}>{tr('ไม่มีเลขมิเตอร์ของ')} {tot.missing.join(', ')} · </span>}
+            {tr('เฉลี่ย')} {BASELINE_DAYS} {tr('วันก่อน')}{' '}
+            {prev == null ? '…' : prev.err ? <span style={{ color: WARN }}>{tr('อ่านไม่ได้')}</span>
+              : <><b>{fmt(totCmp.avg)} kW</b>{pctTxt(totCmp.pct)}{totCmp.n < BASELINE_DAYS ? ` · ${tr('คิดได้')} ${totCmp.n}/${BASELINE_DAYS} ${tr('วัน')}` : ''}</>}
+          </div>
+        </div>
+        {all.length > 1 && (
+          <div style={{ flex: '2 1 320px', minWidth: 0, display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) auto auto', gap: '2px 12px', fontSize: 12.5, alignContent: 'start' }}>
+            <span style={{ color: 'var(--muted)' }}>{tr('มิเตอร์')}</span><span style={{ color: 'var(--muted)', textAlign: 'right' }}>{tr('วันนี้')}</span><span style={{ color: 'var(--muted)', textAlign: 'right' }}>{tr('เฉลี่ย')} {BASELINE_DAYS} {tr('วันก่อน')}</span>
+            {panel.meters.map(m => {
+              const t = before ? null : calc(readings, [m.name], today);
+              const cmp = baselineCompare(t?.kw ?? null, prevFor([m.name]));
+              return (
+                <div key={m.key} style={{ display: 'contents' }}>
+                  <span style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text)', paddingLeft: m.parent ? 12 : 0 }}>{m.parent ? '└ ' : ''}{m.label}</span>
+                  <span style={{ textAlign: 'right', color: 'var(--text)' }}>{fmt(t?.kw)}</span>
+                  <span style={{ textAlign: 'right', color: 'var(--text2)' }}>{prev?.rows ? `${fmt(cmp.avg)}${pctTxt(cmp.pct)}` : '—'}</span>
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--muted)', marginTop: 6 }}>
+        {tr('กำลังไฟเฉลี่ยช่วงพัก จากส่วนต่างเลขมิเตอร์ (kWh) · ยอดตู้ = มิเตอร์ชั้นบนสุด · ช่วงเวลาแก้ที่แท็บตั้งค่าตู้ · วันก่อนที่ขาดข้อมูลไม่นับ')}
       </div>
     </div>
   );

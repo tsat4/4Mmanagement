@@ -18749,6 +18749,17 @@ const EN = {
   'ตกทอดจากระดับแม่/โรงงาน': 'Inherited from parent/plant',
   'อ่านอย่างเดียว · ไม่นับน้ำหนักของใบนี้': 'read-only · not counted in this sheet\'s weight',
   'แก้เป้า/น้ำหนักที่ขอบเขตนั้น': 'edit target/weight at that scope',
+  "อ่านค่าตั้งของตู้ไม่ได้": "Cannot read panel settings",
+  "ยังไม่ได้ตั้งช่วง baseline (แท็บตั้งค่าตู้)": "No baseline window set (Panel settings tab)",
+  "ช่วงพัก": "break window",
+  "ยังไม่จบช่วง": "window in progress",
+  "วันนี้ยังไม่ถึงช่วง": "today has not reached the window",
+  "ไม่มีเลขมิเตอร์ของ": "no meter reading for",
+  "กำลังไฟเฉลี่ยช่วงพัก จากส่วนต่างเลขมิเตอร์ (kWh) · ยอดตู้ = มิเตอร์ชั้นบนสุด · ช่วงเวลาแก้ที่แท็บตั้งค่าตู้ · วันก่อนที่ขาดข้อมูลไม่นับ": "Average power in the break window from the kWh meter difference · panel total = top-level meters · window set in Panel settings · days with missing data are excluded",
+  "ค่าตั้งต่อตู้ — เป้า Demand 15 นาที · ช่วง Baseline": "Per-panel settings — 15-min demand target · baseline window",
+  "ช่วง Baseline = เวลาพักที่เครื่องควรเบา (เวลาไทย 24 ชม.) · ว่างทั้งคู่ = ไม่โชว์ Baseline": "Baseline window = break time when load should be low (Thai time, 24 h) · both blank = no baseline",
+  "เริ่ม Baseline": "Baseline start",
+  "จบ Baseline": "Baseline end",
 };
 
 export default EN;

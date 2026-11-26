@@ -880,3 +880,51 @@ export function demandWindows({ readings = [], names = [], nowMs = Date.now(), d
   const missing = names.filter(n => !by.get(n).size)
   return { current: { start: curStart, end: curStart + W, elapsedMin, avgKw, projectedKw }, prev, todayMax, windows, missing }
 }
+
+/* ══ 🍱 Baseline ช่วงพัก (26/11 · คำสั่ง user "ทำ Baseline พักเที่ยงต่อเลย") ═══════════════════════════
+   กำลังไฟเฉลี่ยในช่วงที่ "ควรเบา" (พักเที่ยง) = โหลดพื้นฐาน · ดูว่าวันนี้สูงกว่าวันก่อนไหม (ลืมปิด/ลมรั่ว)
+   ช่วงเวลาอ่านจาก energy_panel_settings.baseline_start/end (ห้าม hardcode) · คิดจากส่วนต่างเลขมิเตอร์ kWh
+   (กติกาเดียวกับ Demand: แถว bucket b ≈ เลขปลายนาที b ⇒ พลังงาน [s, e) = kwh(e−1) − kwh(s−1) · ถอยได้ ≤ 2 นาที) */
+
+/** เลขมิเตอร์ของมิเตอร์ ณ ปลายนาที t (ถอยได้ ≤ 2 นาที) · ไม่มี = null */
+function kwhAt(byTs, t) { for (let d = 0; d <= 2; d++) { const v = byTs.get(t - d * MIN_MS); if (v != null) return v } return null }
+
+/**
+ * kW เฉลี่ยของ "หลายมิเตอร์รวมกัน" ในช่วง [startMs, endMs) · ช่วงยังไม่จบ = เฉลี่ยถึงนาทีล่าสุดที่ทุกมิเตอร์มีค่า
+ * @returns {{ kw:number|null, minutes:number|null, partial:boolean, missing:string[] }}
+ *   missing = มิเตอร์ที่ไม่มีเลข kWh ในช่วงเลย (จอต้องบอก) · ขาดจุดขอบ/เลขถอยหลัง = kw null (ห้ามเดา)
+ */
+export function windowAvgKw({ readings = [], names = [], startMs, endMs } = {}) {
+  const by = new Map(names.map(n => [n, new Map()]))
+  for (const r of readings || []) {
+    const m = by.get(r.scope_name)
+    const t = Date.parse(r.bucket_at), k = numOrNull(r.kwh_total)
+    if (m && Number.isFinite(t) && k != null) m.set(t, k)
+  }
+  const missing = names.filter(n => ![...by.get(n).keys()].some(t => t >= startMs - 3 * MIN_MS && t < endMs))
+  if (!names.length || missing.length) return { kw: null, minutes: null, partial: false, missing }
+  // ปลายช่วงที่ใช้ได้ = นาทีล่าสุดที่ "ทุกมิเตอร์" มีค่า (ไม่เกิน e−1)
+  let tc = endMs - MIN_MS
+  for (const m of by.values()) {
+    let last = null
+    for (const t of m.keys()) if (t >= startMs && t <= endMs - MIN_MS && (last == null || t > last)) last = t
+    if (last == null) return { kw: null, minutes: null, partial: false, missing }
+    tc = Math.min(tc, last)
+  }
+  let sum = 0
+  for (const m of by.values()) {
+    const a = kwhAt(m, startMs - MIN_MS), b = kwhAt(m, tc)
+    if (a == null || b == null || b < a) return { kw: null, minutes: null, partial: false, missing }
+    sum += b - a
+  }
+  const minutes = (tc - startMs) / MIN_MS + 1
+  return { kw: sum / (minutes / 60), minutes, partial: tc < endMs - MIN_MS, missing }
+}
+
+/** เทียบวันนี้กับเฉลี่ยวันก่อน (เฉพาะวันที่คิดได้ — วันขาดข้อมูลไม่นับ ห้ามเติม 0) */
+export function baselineCompare(todayKw, prevKws = []) {
+  const ok = prevKws.filter(v => v != null && Number.isFinite(v))
+  const avg = ok.length ? ok.reduce((s, v) => s + v, 0) / ok.length : null
+  const pct = todayKw != null && avg ? ((todayKw - avg) / avg) * 100 : null
+  return { avg, n: ok.length, pct }
+}
