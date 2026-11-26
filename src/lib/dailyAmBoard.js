@@ -20,7 +20,8 @@ import { MO_DONE_STATUSES } from '../utils/mtnStepPerm'
 import { amShiftInfo, isDailyAmEquipment, openFamilyLines, runningMachinesByLine, amCarryOverByJig } from './pmDailyStatus'
 import { loadRunDays } from '../utils/runDays'
 import { runKey } from '../utils/dailyCheckDay'
-import { amMonthRange } from './amMonthly'
+import { amMonthRange, amSlotOf } from './amMonthly'
+import { amFreqOf, lookbackStart } from '../utils/amCheckFreq'
 
 // ส่วน pure (กะ · ขอบเขตอุปกรณ์ · สรุปต่อไลน์) อยู่ใน pmDailyStatus.js (ไม่แตะ supabase ⇒ เทสได้) — re-export ให้จอเรียกจากที่เดียว
 export { amShiftInfo, isDailyAmEquipment, dailyAmTargetsByLine, dailyAmLineStatus, amModeNote } from './pmDailyStatus'
@@ -261,4 +262,28 @@ export async function loadMonthlyAm({ month, lines = null } = {}) {
     runsByKey: runs.ok ? runs.byKey : null, runsError: runs.ok ? null : (runs.error?.message || String(runs.error)),
     ordersByKey, ordersError, amStations: st.data, amStationsError: st.error,
   }
+}
+
+/** 🗓️ รอบตรวจรายหัวข้อ AM (26/11 · utils/amCheckFreq.js) — "ข้อนี้มีผลตรวจในช่องไหนบ้าง" ย้อนถึงต้นรอบที่ยาวสุด
+ *  ดึงเฉพาะข้อที่ไม่ใช่ "ทุกกะ" · ไม่มีข้อแบบนั้น = ไม่ยิงฐาน
+ *  @returns {Promise<{ map: Map<string,{workDate:string,shift:string}[]>|null, error: string|null }>}
+ *   🔴 `map:null` = อ่านไม่ได้ ⇒ ผู้เรียกถือว่าทุกข้อถึงรอบ + เขียนบนจอ (splitDueCps) */
+export async function loadAmCpLastDone(cps = [], now = new Date()) {
+  const ids = (cps || []).filter(c => amFreqOf(c) !== 'shift').map(c => c.id)
+  if (!ids.length) return { map: new Map(), error: null }
+  const slot = amSlotOf(now)
+  const from = slot ? lookbackStart(slot.workDate) : null
+  if (!from) return { map: null, error: 'คำนวณช่วงรอบไม่ได้' }
+  const r = await fetchByIds(ids, c => supabaseDR.from('inspection_results')
+    .select('id, checkpoint_id, inspections!inner(inspected_at)').in('checkpoint_id', c)
+    .gte('inspections.inspected_at', `${from}T08:00:00+07:00`))
+  if (r.error) return { map: null, error: r.error }
+  const map = new Map()
+  for (const row of r.rows || []) {
+    const s = amSlotOf(row.inspections?.inspected_at)
+    if (!s) continue
+    if (!map.has(row.checkpoint_id)) map.set(row.checkpoint_id, [])
+    map.get(row.checkpoint_id).push(s)
+  }
+  return { map, error: null }
 }

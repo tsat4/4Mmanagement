@@ -14,6 +14,7 @@ import CommitInput from '../components/CommitInput';
 import { DEPT_LABEL, EQUIP_TYPE_LABEL, CYCLE_PRESETS, cycleDaysOf, cycleLabel, freqForCycle, ymdBangkok } from '../lib/pmSchedule'
 import { addDays as addDaysYmd } from '../utils/pmUsage'
 import { loadPmTeams, pmTeamsSync, teamKind, teamKindOf, teamEquipTypeOf, clearPmTeamsCache, isAmTeam, teamLabel } from '../utils/pmTeams'
+import { AM_FREQS, AM_FREQ_META, amFreqOf, amFreqSetupIssue } from '../utils/amCheckFreq'   // 🗓️ รอบตรวจรายหัวข้อ AM (26/11)
 // picker กลาง (single-source audit 2026-09-07) — ไลน์/เครื่อง/พาร์ท/กระบวนการ อ่านจากทะเบียน ไม่พิมพ์เอง
 import LineSelect from '../components/LineSelect'
 import MachineSelect from '../components/MachineSelect'
@@ -98,7 +99,7 @@ function equipTypeOfMachine(m) {
 
 function newCheckpoint(extra = {}) {
   return {
-    _key: crypto.randomUUID(), name: '', type: 'variable', calc: null,   // _key จุดใหม่ = id ตอน insert (จุดคำนวณอ้างได้ก่อนบันทึก)
+    _key: crypto.randomUUID(), name: '', type: 'variable', calc: null, am_check_freq: 'shift',   // _key จุดใหม่ = id ตอน insert (จุดคำนวณอ้างได้ก่อนบันทึก)
     axis: null, category: null, checking_method: null, unit: '', nominal: '', lsl: '', usl: '', lcl: '', ucl: '',
     // โหมดเกณฑ์ของจุดชนิด "ค่าวัด" — client-only (ขึ้นต้น _ = ไม่ลง DB) เพราะ DB มีแค่ lsl/usl
     // ⚠️ ต้องเป็น state จริง ห้าม derive จาก lsl/usl (ดู mMode ด้านล่าง — เคยทำแล้วกดปุ่มไม่ติด)
@@ -178,7 +179,7 @@ const S = {
 }
 
 // ─── CheckpointCard ───────────────────────────────────────────────────────────
-function CheckpointCard({ cp, label, onChange, onDelete, onDuplicate, onCpImage, isPinning, onPinToggle, onUnpin, hasImage, categories, allCategories, methods, calcOptions, calcIssues }) {
+function CheckpointCard({ cp, label, onChange, onDelete, onDuplicate, onCpImage, isPinning, onPinToggle, onUnpin, hasImage, categories, allCategories, methods, calcOptions, calcIssues, isAm = false }) {
   const isVar = cp.type === 'variable'
   // ถ้าหมวดที่เลือกไว้เดิมไม่อยู่ในลิสต์ที่กรองแล้ว (เช่น jig เก่า) ยังต้องโชว์ไม่ให้หาย
   const catOpts = cp.category && !(categories ?? []).some(c => c.code === cp.category)
@@ -219,6 +220,18 @@ function CheckpointCard({ cp, label, onChange, onDelete, onDuplicate, onCpImage,
           </select>
         </div>
       </div>
+      {/* 🗓️ รอบตรวจรายหัวข้อ — เฉพาะใบของทีม AM (26/11 · utils/amCheckFreq.js) · ใบ PM ของช่างตามรอบแผนทั้งใบ ไม่มีช่องนี้ */}
+      {isAm && (
+        <div style={{ marginBottom: 10 }}>
+          <label style={S.label}>{tr('รอบตรวจ (AM)')}</label>
+          <div style={S.freqBtns}>
+            {AM_FREQS.map(f => (
+              <button key={f} type="button" onClick={() => onChange({ am_check_freq: f })} style={S.freqBtn(amFreqOf(cp) === f)}
+                title={tr(AM_FREQ_META[f].short)}>{tr(AM_FREQ_META[f].label)}</button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div style={{ display: 'flex', gap: 6, marginBottom: (isVar || cp.type === 'measure') ? 10 : 0, flexWrap: 'wrap' }}>
         {['variable', 'measure', 'attribute', 'note'].map(t => {
@@ -664,7 +677,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
     if (i < 0) return prev
     const src = prev[i]
     const copy = newCheckpoint({
-      name: src.name, type: src.type, category: src.category, checking_method: src.checking_method,
+      name: src.name, type: src.type, category: src.category, checking_method: src.checking_method, am_check_freq: amFreqOf(src),
       unit: src.unit, group_name: src.group_name, axis: src.axis === 'Y' ? 'X' : 'Y',
       x_pos: src.x_pos, y_pos: src.y_pos, _frameKey: src._frameKey,
       image_path: src.image_path, _imgPreview: src._imgPreview,
@@ -748,6 +761,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
       if (lo != null && hi != null && lo >= hi) { setError(`${tr("จุดตรวจ")} "${c.name.trim()}" ${tr("ค่าต่ำสุด")} (${lo}) ${tr("ต้องน้อยกว่าค่าสูงสุด")} (${hi}) — ${tr("ไม่งั้นจะขึ้น NG ทุกครั้ง")}`); return }
     }
     // รูปหลายมุมได้ตั้งแต่ 1 รูปขึ้นไป ไม่บังคับจำนวน — 2 รูปขึ้นไปปัดดูรอบเครื่องได้ ยิ่งเยอะยิ่งลื่น
+    if (isAmTeam(department)) { const fIssue = amFreqSetupIssue(checkpoints); if (fIssue) { setError(tr(fIssue)); return } }
     if (editJig?.id && framesLoadErr) { setError(`${tr('โหลดรูปเครื่องไม่สำเร็จ')} (${framesLoadErr}) — ${tr('ยังบันทึกไม่ได้ กันรูปของแผนกอื่นถูกทับ · ปิดแล้วเปิดใหม่')}`); return }
     setSaving(true); setError('')
     try {
@@ -932,6 +946,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
             checklist_id: cl.id, jig_id: jigId, name: c.name.trim(), type: c.type,
             axis: c.type === 'variable' ? (c.axis ?? null) : null,
             category: c.category ?? null, checking_method: c.checking_method ?? null, unit: c.unit || null,
+            am_check_freq: isAmTeam(department) ? amFreqOf(c) : 'shift',   // 🗓️ ใบ PM ไม่ใช้ — เก็บค่าเดิมทุกกะ
             nominal: c.nominal !== '' && c.nominal != null ? Number(c.nominal) : null,
             lsl: c.lsl !== '' && c.lsl != null ? Number(c.lsl) : null,
             usl: c.usl !== '' && c.usl != null ? Number(c.usl) : null,
@@ -1056,7 +1071,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
         onDuplicate={() => duplicateCp(cp._key)} onCpImage={f => handleCpImage(cp._key, f)}
         isPinning={activePinKey === cp._key} onPinToggle={() => togglePin(cp._key)} hasImage={frames.length > 0}
         onUnpin={() => { updateCp(cp._key, { x_pos: null, y_pos: null }); if (activePinKey === cp._key) setActivePinKey(null) }}
-        categories={scopedCategories} allCategories={categories} methods={methods} />
+        categories={scopedCategories} allCategories={categories} methods={methods} isAm={isAmTeam(department)} />
     </div>
   )
 
