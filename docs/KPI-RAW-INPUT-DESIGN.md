@@ -99,7 +99,7 @@
 ## 3. เฟสการทำ (เรียง คุ้ม ÷ เสี่ยง)
 | เฟส | ขอบเขต | ต้องเคาะก่อน | ประมาณ |
 |---|---|---|---|
-| **0 — ปิดของที่มีสูตรอยู่แล้ว** (ไม่แตะ schema) | 100P: สลับ 6 นิยามเป็นสูตร (cost_100p มีครบ) · DL+OH ทีมช่าง: กรอก dl/oh ของ Electric/Mechanic/Preventive · Inventory Balance BIG/SMALL PRESS → `inventory_day` · เพิ่มด่าน "KPI ที่มีสูตรในทะเบียน ห้ามสร้างนิยาม manual ใหม่" | §5.3 (หน่วย Inventory = วัน?) | 1 session |
+| **0 — ปิดของที่มีสูตรอยู่แล้ว** (ไม่แตะ schema) | 100P: สลับ 6 นิยามเป็นสูตร (cost_100p มีครบ) · DL+OH ทีมช่าง: กรอก dl/oh ของ Electric/Mechanic/Preventive · Inventory Balance BIG/SMALL PRESS → `inventory_day` · เพิ่มด่าน "KPI ที่มีสูตรในทะเบียน ห้ามสร้างนิยาม manual ใหม่" · **ด่านทะเบียนซ้ำ**: เพิ่ม KPI ชื่อใกล้ทะเบียนเดิม = เสนอให้ใช้ตัวเดิม (ข้ามหน่วย) · แถวตั้งหน่วยต่างจากทะเบียน = เตือน · บอร์ดรวมหน่วยต่างกัน = เขียนว่ารวมไม่ได้ (เคส 26/11 MTTR/MTBF/CR/DL+OH ซ้ำ) | §5.3 (หน่วย Inventory = วัน?) | 1 session |
 | **1 — ช่างทุกทีม** | ตัวแปร mbd_stop_hr/mc_count/fail_count/mo_* + สูตร 4 ตัว · auto จาก `kpi_mtn_rollup` สำหรับทีมที่ map equipment_kind · ที่เหลือกรอกดิบ | §5.5 | 1–2 session |
 | **2 — คน/กิจกรรม** | Internal Satisfaction (score/total) · Cost Reduction ← improvements · **QCC · TS Academy · Engineering Day = คงกรอกมือ (§1.4) รอหมวดกิจกรรมมีฐาน** | §5.4 (§5.1 §5.2 เลื่อนไป) | 1 session |
 | **3 — ความปลอดภัย/PM/คุณภาพ** | Safety 4 ชั้น ← safety_events · PM on plan ← PM module · COPQ ← DR · OEE/PPM เลิกกรอกมือ | §5.3 §5.6 | 1–2 session |
