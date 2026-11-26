@@ -1889,7 +1889,7 @@ export default function PMSetup() {
     if (mode === 'unknown') { toast.error(tr('ตรวจไม่ได้ว่าแผนกอื่นใช้เครื่องนี้อยู่ไหม — ยังไม่ลบ') + (rOther.error ? `: ${rOther.error.message}` : '')); return }
     if (mode === 'view') {
       const names = [...new Set(rOther.data.map(r => r.department))].map(d => pmTeamsSync().find(t => t.key === d)?.label ?? d).join(', ')
-      if (!await askConfirm(`${tr("ถอด")} "${jig.name}" ${tr("ออกจากแผนกนี้")} ?\n\n${tr('เครื่องนี้ยังใช้อยู่ที่')} ${names} — ${tr('ตัวเครื่องและข้อมูลของแผนกนั้นไม่ถูกแตะ')}\n${tr('ที่หายคือจุดตรวจ/แผน/รูปของแผนกนี้เท่านั้น')}`)) return
+      if (!await askConfirm(`${tr("ถอด")} "${jig.name}" ${tr("ออกจากแผนกนี้")} ?\n\n${tr('เครื่องนี้ยังใช้อยู่ที่')} ${names} — ${tr('ตัวเครื่องและข้อมูลของแผนกนั้นไม่ถูกแตะ')}\n${tr('ที่หายคือจุดตรวจ/แผน/รูปของแผนกนี้เท่านั้น')}${isAmTeam(department) ? '\n' + tr('และปิดรายการ AM รายวันของเครื่องนี้') : ''}`)) return
       const cl = await findChecklist(jig.id, 'mtn', department)
       if (cl) {
         const r = await supabaseDR.from('checklists').delete().eq('id', cl.id).select('id')
@@ -1901,8 +1901,16 @@ export default function PMSetup() {
       const dropIds = eFr ? [] : myFrames.filter(r => ownsFrame(r, department)).map(r => r.id)
       const ri = dropIds.length ? await supabaseDR.from('jig_images').delete().in('id', dropIds) : { error: eFr }
       if (ri.error) toast.error(tr('ถอดใบตรวจแล้ว แต่ลบรูปของแผนกนี้ไม่สำเร็จ (รูปยังค้าง ไม่กระทบแผนกอื่น)') + `: ${ri.error.message || ri.error}`)
+      /* 📋 ถอดฝั่ง AM ⇒ ปิดรายการ AM รายวันของเครื่องนี้ด้วย (user 26/11) — ไม่งั้นบอร์ด AM เตือน "ยังไม่มีจุดตรวจ" ค้าง
+         ปิด = is_active false (ไม่ลบ · กติกาเดียวกับเอาออกที่ /daily-pm) · ล้ม = บอก ไม่ยกเลิกการถอด */
+      let amNote = ''
+      if (isAmTeam(department)) {
+        const rt = await supabaseDR.from('pm_daily_line_targets').update({ is_active: false }).eq('jig_id', jig.id).eq('is_active', true).select('id')
+        if (rt.error) toast.error(tr('ถอดแล้ว แต่ปิดรายการ AM รายวันไม่สำเร็จ — ไปเอาออกที่จอ AM รายวัน') + `: ${rt.error.message}`)
+        else if ((rt.data || []).length) { invalidateTable('pm_daily_line_targets'); amNote = ` · ${tr('ปิดรายการ AM รายวัน')} ${rt.data.length} ${tr('รายการ')}` }
+      }
       invalidateTable('checklists')
-      toast.success(tr('ถอดออกจากแผนกนี้แล้ว'))
+      toast.success(tr('ถอดออกจากแผนกนี้แล้ว') + amNote)
       fetchData()
       return
     }
