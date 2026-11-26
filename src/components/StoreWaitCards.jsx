@@ -40,8 +40,8 @@ const fmtQty = (v) => (v == null || v === '' || !Number.isFinite(Number(v)) ? '�
 /* สีต่อเคสรอบส่ง — C ด่วนสุด (ไลน์รออยู่แล้วจริง) · D รองลงมา
    ⚠️ "งานค้างของสโตร์" ไม่ใช่ alarm เครื่องหยุด → **ห้ามกระพริบ** (กฎ Andon: กระพริบเฉพาะแดงของเครื่อง) */
 const CASE = {
-  C: { color: '#ef4444', rank: 0, label: 'เลยเวลาส่ง' },
-  D: { color: '#f59e0b', rank: 1, label: 'รับไม่ครบ' },
+  C: { color: 'var(--red)', rank: 0, label: 'เลยเวลาส่ง' },
+  D: { color: 'var(--amber)', rank: 1, label: 'รับไม่ครบ' },
 };
 /** สีบนผังของไลน์ที่ "เรียกของ" (ไม่มีรอบส่งค้าง) — ม่วง แยกจากเขียว/เหลือง/แดงของสถานะเครื่อง */
 export const REQ_MAP_COLOR = '#a855f7';
@@ -139,7 +139,7 @@ export function useStoreTv({ enabled, inScope, scoped, knownLines }) {
     const m = {};
     abn.filter(r => CASE[r.code] && r.line_name && (!inScope || inScope(r.line_name))).forEach(r => {
       const c = CASE[r.code];
-      const g = (m[r.line_name] = m[r.line_name] || { line: r.line_name, rank: 9, color: '#6b7280', items: [] });
+      const g = (m[r.line_name] = m[r.line_name] || { line: r.line_name, rank: 9, color: 'var(--muted)', items: [] });
       g.items.push({ code: r.code, what: r.part_name || '', detail: r.detail || '' });
       if (c.rank < g.rank) { g.rank = c.rank; g.color = c.color; }
     });
@@ -208,12 +208,12 @@ export default function StoreWaitCards({ data, navigate, big = 1 }) {
       )}
     </div>
     {reqErr && (
-      <div style={{ ...card, borderColor: '#ef4444', color: '#ef4444', fontSize: 12.5 }}>
+      <div style={{ ...card, borderColor: '#ef4444', color: 'var(--red)', fontSize: 12.5 }}>
         ⚠ {tr("ดึงคำขอจากไลน์ไม่สำเร็จ — รายการด้านล่างอาจไม่ครบ")} ({reqErr})
       </div>
     )}
     {loaded && !reqErr && !req.cards.length && (
-      <div style={{ ...card, textAlign: 'center', padding: 18, fontSize: 13 * big, fontWeight: 800, color: '#22c55e' }}>
+      <div style={{ ...card, textAlign: 'center', padding: 18, fontSize: 13 * big, fontWeight: 800, color: 'var(--green)' }}>
         ✅ {tr("ไม่มีไลน์ไหนเรียกของ")}
       </div>
     )}
@@ -231,14 +231,14 @@ export default function StoreWaitCards({ data, navigate, big = 1 }) {
       </div>
     )}
     {req.noLine > 0 && (
-      <div style={{ fontSize: 11, color: '#f59e0b' }}>
+      <div style={{ fontSize: 11, color: 'var(--amber)' }}>
         ⚠ {req.noLine} {tr("ใบไม่ระบุไลน์ — ขึ้นทุกจอสโตร์ (ไปแก้ใบที่บอร์ดสโตร์")})
       </div>
     )}
 
     {/* ══ ② รอบส่งคัมบังค้าง ══ */}
     {err && (
-      <div style={{ ...card, borderColor: '#ef4444', color: '#ef4444', fontSize: 12.5 }}>
+      <div style={{ ...card, borderColor: '#ef4444', color: 'var(--red)', fontSize: 12.5 }}>
         ⚠ {tr("ดึงสถานะสโตร์ไม่สำเร็จ — รอบส่ง/พาร์ทจะขาดยังไม่ใช่ของจริง")} ({err})
       </div>
     )}
@@ -277,7 +277,7 @@ export default function StoreWaitCards({ data, navigate, big = 1 }) {
           {short.rows.length}
         </span>
       </div>
-      {!err && !short.rows.length && <div style={{ fontSize: 12, color: '#22c55e', fontWeight: 700 }}>{tr('✅ ทุกพาร์ทของส่วนงานนี้อยู่เหนือ Min')}</div>}
+      {!err && !short.rows.length && <div style={{ fontSize: 12, color: 'var(--green)', fontWeight: 700 }}>{tr('✅ ทุกพาร์ทของส่วนงานนี้อยู่เหนือ Min')}</div>}
       {short.rows.length > 0 && (
         <div style={{ display: 'flex', gap: 8, fontSize: 11, color: 'var(--muted)', fontWeight: 700, padding: '0 0 3px' }}>
           <span style={{ flex: 1 }}>{tr('พาร์ท')}</span><span style={{ width: 120, textAlign: 'right' }}>{tr('เหลือ / Min')}</span>

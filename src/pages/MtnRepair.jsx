@@ -874,7 +874,7 @@ const HANDOFF_CAP = 2000;
         value: fStatus === 'open' ? 'ยังไม่ปิด' : (STATUS_META[fStatus]?.label || fStatus),
         // 🔵 "ยังไม่ปิด" = isMoOpen (รวม transferred = จบแล้ว · utils/mtnStepPerm) ห้ามเทียบ status ตรงๆ
         test: fStatus === 'open' ? isMoOpen : (o => o.status === fStatus) },
-      { key: 'line', label: 'ไลน์', value: fLine, on: !!fLine,
+      { key: 'line', label: trI18n("ไลน์"), value: fLine, on: !!fLine,
         test: fam && fam.size ? (o => fam.has(o.line_name)) : (o => o.line_name === fLine) },
       { key: 'dept', label: 'ทีมช่าง', value: deptNameOf(fDept), on: !!fDept,
         test: o => sameTeam(o.mtn_dept || deptForItem(o.item_type), fDept) },
@@ -2468,7 +2468,7 @@ function printMoReportMtn(o, dparts = [], logo0, dlabor = [], cmt = NO_CMT, cost
     <tr>
       <td style="width:78%;padding:3px 5px">
         <div>เรียน &nbsp;ผู้จัดการส่วนซ่อมบำรุง</div>
-        <div style="margin-top:2px">${line('จากฝ่าย/ส่วน', o.work_area, '95px')} &nbsp;${line('แผนก', o.dept_section, '75px')} &nbsp;${line('เบอร์ติดต่อ', o.contact_phone, '45px')} &nbsp;${line('Cost Center', o.cost_center, '85px')}</div>
+        <div style="margin-top:2px">${line('จากฝ่าย/ส่วน', o.work_area, '95px')} &nbsp;${line(trI18n("แผนก"), o.dept_section, '75px')} &nbsp;${line('เบอร์ติดต่อ', o.contact_phone, '45px')} &nbsp;${line('Cost Center', o.cost_center, '85px')}</div>
         <div style="margin-top:3px">PR.No. ${grid(prPl.header, MO_PR_DIGITS)} &nbsp;&nbsp; I/O. ${grid(o.io_no, IO_DIGITS)}</div>
         <div style="margin-top:3px">${line('ชื่อเครื่องจักร', o.item_type, '135px')} ${line('เบอร์', o.machine_no, '80px')}
           จุดประสงค์ (${purpose === 'repair' ? '✓' : '&nbsp;'}) ซ่อม (${purpose === 'improve' ? '✓' : '&nbsp;'}) ปรับปรุง (${purpose === 'service' ? '✓' : '&nbsp;'}) บริการ (${purpose === 'build' ? '✓' : '&nbsp;'}) สร้าง</div>
@@ -2655,7 +2655,7 @@ function MachineUsabilityPanel({ order, machines, fullName, canEdit, affectedLin
           <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
             {MACHINE_USABILITY.map(x => (
               <button key={x.key} type="button" onClick={() => { setPick(x.key); setNote(x.key === u.state ? (mc.usability_note || '') : ''); }}
-                title={trI18n(x.hint || x.label)}
+                title={trI18n(trI18n(x.hint) || trI18n(x.label))}
                 style={{ ...(pick === x.key ? btnPri : btnGhost), padding: '5px 10px', fontSize: 12,
                          ...(pick === x.key ? {} : { color: x.color, borderColor: x.color }) }}>
                 {trI18n(x.label)}
@@ -3579,7 +3579,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
           <StepBox n={1} done>
             <Row k={trI18n("วันเวลาที่แจ้ง")} v={fmtDateTime(o.report_at)} /><Row k={trI18n("หน่วยงาน")} v={deptNameOf(dept)} />
             {o.occurred_at && <Row k={trI18n("เกิดเหตุจริง")} v={`${fmtDateTime(o.occurred_at)} (${trI18n("แจ้งย้อนหลัง")})`} />}
-            <Row k={trI18n("ขอบเขต / ประเภท")} v={[SCOPE_OPTS.find(s => s.v === o.repair_scope)?.t, o.current_step < 2 && o.repair_type ? `${o.repair_type} (ผู้แจ้งระบุ)` : null].filter(Boolean).join(' · ')} />
+            <Row k={trI18n("ขอบเขต / ประเภท")} v={[trI18n(SCOPE_OPTS.find(s => s.v === o.repair_scope)?.t), o.current_step < 2 && o.repair_type ? `${o.repair_type} (ผู้แจ้งระบุ)` : null].filter(Boolean).join(' · ')} />
             <Row k={trI18n("ไลน์ / แผนก")} v={`${o.line_name || '—'}${o.dept_section ? ' · ' + o.dept_section : ''}`} />
             <Row k={trI18n("ส่วนงาน")} v={o.work_area} /><Row k="Cost Center" v={o.cost_center} />
             <Row k={trI18n("อุปกรณ์")} v={`${o.item_type || '—'} ${o.machine_no || ''}`} />
@@ -3629,7 +3629,7 @@ function DetailDrawer({ order, role, allUnits = false, parts = [], machines = nu
               <Row k={trI18n("ความพึงพอใจเฉลี่ย")} v={`${satAvg(o.satisfaction).toFixed(2)}/3 (${Math.round(satAvg(o.satisfaction) / 3 * 100)}%)`} />
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 4, marginTop: 2 }}>
                 {SAT_DIMS.filter(d => o.satisfaction?.[d.key]).map(d => { const lv = SAT_LEVELS.find(l => l.v === Number(o.satisfaction[d.key])); return (
-                  <span key={d.key} style={{ fontSize: 11, padding: '2px 6px', borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)', border: `1px solid ${lv?.color || 'var(--border)'}`, color: 'var(--text2)' }}>{trI18n(d.label)}: <b style={{ color: lv?.color }}>{lv?.t}</b></span>
+                  <span key={d.key} style={{ fontSize: 11, padding: '2px 6px', borderRadius: 'var(--r-md)', background: 'var(--bg3-surf)', border: `1px solid ${lv?.color || 'var(--border)'}`, color: 'var(--text2)' }}>{trI18n(d.label)}: <b style={{ color: lv?.color }}>{trI18n(lv?.t)}</b></span>
                 ); })}
               </div>
             </div>}
@@ -4736,7 +4736,7 @@ function StepModal({ step, order, editMode, skipQa = false, techs, repairTypes, 
                       const on = Number(f.satisfaction?.[d.key]) === lv.v;
                       return <button key={lv.v} type="button" onClick={() => set('satisfaction', { ...f.satisfaction, [d.key]: on ? undefined : lv.v })}
                         style={{ padding: '5px 12px', borderRadius: 'var(--r-md)', fontSize: 12, fontWeight: 700, cursor: 'pointer',
-                          border: `1px solid ${on ? lv.color : 'var(--border)'}`, background: on ? lv.color : 'var(--bg3)', color: on ? 'var(--bg)' : 'var(--text2)' }}>{lv.t}</button>;
+                          border: `1px solid ${on ? lv.color : 'var(--border)'}`, background: on ? lv.color : 'var(--bg3)', color: on ? 'var(--bg)' : 'var(--text2)' }}>{trI18n(lv.t)}</button>;
                     })}
                   </div>
                 </div>

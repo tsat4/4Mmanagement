@@ -52,7 +52,7 @@ const groupBy = (records, keyOf) => {
 
 export default function ParetoAbcChart({
   title, records = [], dims = [], unit, height = 240,
-  emptyText = 'ไม่มีข้อมูล', sectionStyle, titleStyle,
+  emptyText = tr("ไม่มีข้อมูล"), sectionStyle, titleStyle,
   /* focus = สั่งเปิดหน้าต่างเจาะจากภายนอก (เช่นการ์ด "💰 มูลค่าดาวไทม์" กด Top-5 แล้วเจาะทันที)
      รูปแบบ { cat, measure?, dim?, n } — `n` เป็น nonce: กดชื่อเดิมซ้ำต้องเปิดใหม่ได้
      ⚠️ ตั้ง measure ให้ตรงกับสิ่งที่คนกดมา (กดจากการ์ดเงิน = ต้องได้แกนบาท ไม่งั้นเรียงคนละชุดกับที่เห็น) */

@@ -511,7 +511,7 @@ export default function MaterialRequests() {
           <input autoFocus value={pq} onChange={e => setPq(e.target.value)}
             placeholder={tr('ค้นด้วยรหัส MAT หรือชื่อพาร์ท')} style={{ ...inpSt, width: '100%', marginBottom: 8 }} />
           {!parts.length && (
-            <div style={{ fontSize: 12, color: '#f59e0b', marginBottom: 8 }}>
+            <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 8 }}>
               ⚠️ {tr("ยังไม่มีข้อมูลใน Material Master — กรอกรหัส/ชื่อเองได้ในตาราง แล้วไปลงทะเบียนที่")} Product Master → 🗂 Material Master
             </div>
           )}

@@ -471,9 +471,9 @@ function RuleNote({ ruleKey }) {
     <div style={{ fontSize: 11.5, color: 'var(--text2)', lineHeight: 1.6, marginTop: 8,
       borderTop: '1px dashed var(--border)', paddingTop: 7 }}>
       <b style={{ color: 'var(--muted)' }}>{tr('เกณฑ์สีของแผงนี้')}</b> ·{' '}
-      <Dot eva="R" size={9} /> {r.red} ·{' '}
-      <Dot eva="Y" size={9} /> {r.yellow} ·{' '}
-      <Dot eva="G" size={9} /> {r.green}
+      <Dot eva="R" size={9} /> {tr(r.red)} ·{' '}
+      <Dot eva="Y" size={9} /> {tr(r.yellow)} ·{' '}
+      <Dot eva="G" size={9} /> {tr(r.green)}
     </div>
   );
 }
@@ -1095,10 +1095,10 @@ function LevelPanel({ proj, panel }) {
               <tbody>{SPTT_REQUIREMENTS.map(r => (
                 <tr key={r.sptt}>
                   <td style={{ ...td, whiteSpace: 'nowrap', fontWeight: 700 }}>{r.sptt}</td>
-                  <td style={{ ...td, whiteSpace: 'nowrap' }}>{r.milestone}</td>
+                  <td style={{ ...td, whiteSpace: 'nowrap' }}>{tr(r.milestone)}</td>
                   <td style={{ ...td, textAlign: 'center' }}>{r.offTool}</td>
                   <td style={{ ...td, textAlign: 'center' }}>{r.offProcess}</td>
-                  <td style={td}>{r.quality}</td>
+                  <td style={td}>{tr(r.quality)}</td>
                   <td style={{ ...td, color: 'var(--text2)' }}>{r.capacity}</td>
                 </tr>
               ))}</tbody>

@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo, useRef, useContext } from 'react';
 import { HEIJUNKA_VIEW_META } from '../utils/navSubTabs';
+import KanbanCabinet from '../components/KanbanCabinet';
 import { isCoilUom } from '../utils/coilUom';
 import { urlParam, urlPick, urlBool } from '../utils/urlInit';
 import { lineNameCompare } from '../utils/lineHierarchy';
@@ -605,7 +606,7 @@ function DeliveryRoundsPanel({ rounds, deliveries, onConfirm, confirming, onRece
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer', marginBottom: collapsed ? 0 : 16 }}
         onClick={() => setCollapsed(v => !v)}>
         <div style={{ fontWeight: 800, fontSize: 15, color: 'var(--text)', fontFamily: 'var(--font-display)' }}>
-          ⏰ {tr("รอบจัดส่ง")}{(() => { const { startMs, endMs } = dayFrameMs(workDate); return nowMs >= startMs && nowMs < endMs ? 'วันนี้' : ` ${workDate}`; })()} <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>({rounds.length} {tr("รอบ")})</span>
+          ⏰ {tr("รอบจัดส่ง")}{(() => { const { startMs, endMs } = dayFrameMs(workDate); return nowMs >= startMs && nowMs < endMs ? tr("วันนี้") : ` ${workDate}`; })()} <span style={{ fontSize: 12, color: 'var(--muted)', fontWeight: 600 }}>({rounds.length} {tr("รอบ")})</span>
         </div>
         <span style={{ color: 'var(--muted)', fontSize: 14 }}>{collapsed ? '▶' : '▼'}</span>
       </div>
@@ -773,19 +774,19 @@ function PlannerStrip({ rounds, deliveries, roundAlloc, workDate, breakPolicies,
   return (
     <div style={{ marginBottom: 16 }}>
       <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-        {tile('⏱', 'ตัดยอดถัดไป',
+        {tile('⏱', tr("ตัดยอดถัดไป"),
           nextCut ? `${tr("อีก")} ${nextCutMins} ${tr("นาที")}` : isToday ? '—' : '—',
-          nextCut ? `${nextCut.r.line_name} ${tr("รอบ")} ${nextCut.r.round_no} · ${tr("ตัดยอด")} ${nextCut.r.cutoff_time?.slice(0, 5)}` : (isToday ? 'ไม่มีรอบที่รอตัดยอด' : 'นอกกรอบวันงานที่เลือก'),
+          nextCut ? `${nextCut.r.line_name} ${tr("รอบ")} ${nextCut.r.round_no} · ${tr("ตัดยอด")} ${nextCut.r.cutoff_time?.slice(0, 5)}` : (isToday ? tr("ไม่มีรอบที่รอตัดยอด") : 'นอกกรอบวันงานที่เลือก'),
           nextCut && nextCutMins <= 15 ? 'var(--amber)' : 'var(--text)')}
-        {tile('⏭', 'รอบส่งถัดไป',
-          next ? (nextMins > 0 ? `${tr("อีก")} ${nextMins} ${tr("นาที")}` : '🚚 กำลังส่ง') : isToday ? 'ครบทุกรอบแล้ว' : '—',
+        {tile('⏭', tr("รอบส่งถัดไป"),
+          next ? (nextMins > 0 ? `${tr("อีก")} ${nextMins} ${tr("นาที")}` : '🚚 กำลังส่ง') : isToday ? tr("ครบทุกรอบแล้ว") : '—',
           next ? `${next.r.line_name} ${tr("รอบ")} ${next.r.round_no} · ${tr("ส่ง")} ${next.r.delivery_time?.slice(0, 5)}` : (isToday ? '' : 'นอกกรอบวันงานที่เลือก'),
           next && nextMins <= 15 ? 'var(--amber)' : 'var(--text)')}
-        {tile('🔴', 'รอบค้างส่ง', overdue.length,
-          overdue.length ? overdue.slice(0, 2).map(r => `${r.line_name} ${tr("รอบ")} ${r.round_no}`).join(' · ') + (overdue.length > 2 ? ` +${overdue.length - 2}` : '') : 'ไม่มี',
+        {tile('🔴', tr("รอบค้างส่ง"), overdue.length,
+          overdue.length ? overdue.slice(0, 2).map(r => `${r.line_name} ${tr("รอบ")} ${r.round_no}`).join(' · ') + (overdue.length > 2 ? ` +${overdue.length - 2}` : '') : tr("ไม่มี"),
           overdue.length ? 'var(--red)' : 'var(--green)')}
-        {tile('🎴', 'การ์ดรอเตรียมส่ง', cardsLeft, `${pending.length} ${tr("รอบที่ยังไม่ยืนยันส่ง")}`, cardsLeft > 0 ? 'var(--amber)' : 'var(--green)')}
-        {tile('✅', 'ยืนยันส่งแล้ว', `${confirmedCount}/${rounds.length}`, isToday ? 'รอบของวันนี้ทั้งหมด' : `${tr("รอบของ")} ${workDate} ${tr("ทั้งหมด")}`, confirmedCount === rounds.length ? 'var(--green)' : 'var(--text)')}
+        {tile('🎴', tr("การ์ดรอเตรียมส่ง"), cardsLeft, `${pending.length} ${tr("รอบที่ยังไม่ยืนยันส่ง")}`, cardsLeft > 0 ? 'var(--amber)' : 'var(--green)')}
+        {tile('✅', tr("ยืนยันส่งแล้ว"), `${confirmedCount}/${rounds.length}`, isToday ? tr("รอบของวันนี้ทั้งหมด") : `${tr("รอบของ")} ${workDate} ${tr("ทั้งหมด")}`, confirmedCount === rounds.length ? 'var(--green)' : 'var(--text)')}
       </div>
       {warnings.length > 0 && (
         <div style={{ marginTop: 10, padding: '10px 14px', background: 'var(--red-dim)', border: '1px solid var(--red-line)', borderRadius: 'var(--radius-lg)' }}>
@@ -1048,7 +1049,7 @@ function PullBoard({ lotRequests, rawRequests, accumulator, lotSizeMap, releaseD
               <div style={{ fontSize: 12, fontWeight: 800, color: 'var(--blue)', marginBottom: 8 }}>{lineName} <span style={{ color: 'var(--muted)', fontWeight: 600 }}>{tr('· คิว')} {queue.length}</span></div>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(290px, 100%), 1fr))', gap: 12 }}>
                 {lineLots.map(lot => {
-                  const st = LOT_STATUS[lot.status] || LOT_STATUS.pending;
+                  const st = LOT_STATUS[lot.status] || tr(LOT_STATUS.pending);
                   const raws = rawByLot[lot.id] || [];
                   const qIdx = queue.findIndex(l => l.id === lot.id);
                   const canReorder = canOperate && lot.status !== 'done' && queue.length > 1;
@@ -1403,7 +1404,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
         <div style={{ fontSize: 13.5, fontWeight: 800, color: 'var(--text)', margin: '0 0 8px' }}>{tr('ใบเบิก-ส่งเข้าไลน์')} <span style={{ fontWeight: 500, color: 'var(--muted)', fontSize: 12 }}>{tr('· ไลน์เรียก/เปิดใบผลิต → สโตร์หยิบ → ส่งถึงไลน์')}</span></div>
         {rows.length === 0 ? <div style={{ padding: 18, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มีใบเบิกที่ค้างอยู่')}{q ? ` ${tr("และตรงกับคำค้น")} "${q}"` : ''}</div> : (
         <StatusZones layout={zl} rows={rows} zones={WIP_ZONES(showDone)} renderCard={w => {
-            const st = WIP_STATUS[w.status] || WIP_STATUS.pending;
+            const st = WIP_STATUS[w.status] || tr(WIP_STATUS.pending);
             /* 🔴 2026-10-01 — ใบขอเติมมีรูปแบบเดียว: "ส่งพาร์ทเข้าไลน์" (ชั้น พื้นที่→ไลน์→พาร์ท)
                เลิกใบแบบ "เติมจุด WIP จุดใดจุดหนึ่ง" แล้ว (ไม่เคยถูกใช้จริงสักใบ — ทุกใบในฐานเป็นใบระดับไลน์)
                คอลัมน์ `point_name`/`point_type`/`wip_point_id` ยังอยู่ในตารางเพื่ออ่านประวัติ ห้ามเขียนใหม่ */
@@ -1515,7 +1516,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
         {lotRequests.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ยังไม่มีใบสั่งผลิตพาร์ทย่อย')}</div> :
         vLots.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มีใบสั่งผลิตที่ค้างอยู่')}{q ? ` ${tr("และตรงกับคำค้น")} "${q}"` : ''}</div> :
         <StatusZones layout={zl} rows={vLots} zones={LOT_ZONES(showDone)} renderCard={lot => {
-            const st = LOT_STATUS[lot.status] || LOT_STATUS.pending;
+            const st = LOT_STATUS[lot.status] || tr(LOT_STATUS.pending);
             /* 🔴 27/10 (feedback สโตร์ ข้อ A2): *"ปุ่ม รับของเข้าสโตร์ ให้เอาออก ... ถ้าสโตร์มีการกดรับงาน
                จากหน้า สต็อกในไลน์ > รอรับเข้า"* ⇒ ขั้นสุดท้ายของล็อตมี 2 ความหมาย แล้วแต่ "ของเข้าทางไหน":
                · พาร์ทโหมด 🔧 ปิดล็อต = ปุ่มนี้คือที่ที่ของเข้าคลัง (ข้อความเดิม)
@@ -1556,7 +1557,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
         {lotRequests.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ยังไม่มีใบสั่งผลิตพาร์ทย่อย')}</div> :
         vLots.length === 0 ? <div style={{ padding: 30, textAlign: 'center', color: 'var(--muted)', fontSize: 13 }}>{tr('ไม่มีใบสั่งผลิตที่ค้างอยู่')}{q ? ` ${tr("และตรงกับคำค้น")} "${q}"` : ''}</div> :
         <StatusZones layout={zl} rows={vLots} zones={LOT_ZONES(showDone)} renderCard={lot => {
-            const st = LOT_STATUS[lot.status] || LOT_STATUS.pending;
+            const st = LOT_STATUS[lot.status] || tr(LOT_STATUS.pending);
             /* 🔴 27/10 (feedback สโตร์ ข้อ A2): *"ปุ่ม รับของเข้าสโตร์ ให้เอาออก ... ถ้าสโตร์มีการกดรับงาน
                จากหน้า สต็อกในไลน์ > รอรับเข้า"* ⇒ ขั้นสุดท้ายของล็อตมี 2 ความหมาย แล้วแต่ "ของเข้าทางไหน":
                · พาร์ทโหมด 🔧 ปิดล็อต = ปุ่มนี้คือที่ที่ของเข้าคลัง (ข้อความเดิม)
@@ -1608,7 +1609,7 @@ function UnifiedStoreBoard({ store, setStore, opsStores = null, readOnly = false
             </div>
             {hiddenNote}
             <StatusZones layout={zl} rows={purGroups} zones={PUR_ZONES(showDone)} renderCard={g => {
-                const st = PURCHASE_STATUS[g.status] || PURCHASE_STATUS.pending;
+                const st = PURCHASE_STATUS[g.status] || tr(PURCHASE_STATUS.pending);
                 const many = g.slips > 1;
                 const lot = Number(g.min_lot) === Number(g.max_lot)
                   ? `${fmt(g.min_lot)} ${tr("ชิ้น")} × ${fmt(g.slips)} ${tr("ใบ")}`
@@ -3218,7 +3219,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
         )}
         <input type="date" value={workDate} onChange={e => setWorkDate(e.target.value)} />
         <Segmented value={shiftFilter} onChange={setShiftFilter} label={tr('กะ')}
-          options={[{ value: 'all', label: ALL.shift }, { value: 'day', label: SHIFT_LABEL.day }, { value: 'night', label: SHIFT_LABEL.night }]} />
+          options={[{ value: 'all', label: ALL.shift }, { value: 'day', label: tr(SHIFT_LABEL.day) }, { value: 'night', label: tr(SHIFT_LABEL.night) }]} />
         <span className="sep" />
         {/* 🧰 18/11 (audit Choice overload): ชิปประเภทพาร์ท 5 ตัวพับหลัง "ตัวกรองเพิ่มเติม" — ตั้งค่าไว้ = กางเอง + ปุ่มบอกค่า */}
         <FilterMore id="hk-more-filters" defaultOpen={!!matFilter}>
@@ -3303,7 +3304,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
           color: viewAct ? 'var(--green)' : 'var(--muted)',
         }}>{viewAct ? tr('🖐 กดทำงานได้') : tr('👁️ ดูอย่างเดียว')}</span>
         <span style={{ fontSize: 12, color: 'var(--text2)', fontWeight: 600 }}>
-          {isOps ? VIEW_META[viewMode]?.purpose : (VIEW_META[viewMode]?.monitor || VIEW_META[viewMode]?.purpose)}
+          {isOps ? tr(VIEW_META[viewMode]?.purpose) : (tr(VIEW_META[viewMode]?.monitor) || tr(VIEW_META[viewMode]?.purpose))}
         </span>
         {/* 👁 04/11 — /heijunka ดูสัญญาณอย่างเดียว · บอกทางไปจอทำรายการทุกมุมมอง */}
         {!isOps && (
@@ -3337,7 +3338,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
             leadFilters={isOps && direction === 'out' ? (<>
               <input type="date" value={workDate} onChange={e => setWorkDate(e.target.value)} aria-label={tr('วันที่ (รอบส่ง)')} />
               <Segmented value={shiftFilter} onChange={setShiftFilter} label={tr('กะ')}
-                options={[{ value: 'all', label: ALL.shift }, { value: 'day', label: SHIFT_LABEL.day }, { value: 'night', label: SHIFT_LABEL.night }]} />
+                options={[{ value: 'all', label: ALL.shift }, { value: 'day', label: tr(SHIFT_LABEL.day) }, { value: 'night', label: tr(SHIFT_LABEL.night) }]} />
               {isBackDate && (
                 <button type="button" onClick={() => setWorkDate(liveWorkDate)} title={tr('กำลังดูวันที่ไม่ใช่วันงานปัจจุบัน')}
                   style={{ fontSize: 12, fontWeight: 700, color: 'var(--amber)', background: 'var(--amber-dim)', border: '1px solid var(--amber-line)',
@@ -3352,7 +3353,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
               <ProdProgressStrip workDate={workDate}
                 onOpenLine={(ln) => navigate(`/management?line=${encodeURIComponent(ln)}&view=heijunka`)} />
             </>) : null}
-            purpose={isOps ? VIEW_META.unified?.purpose : null}
+            purpose={isOps ? tr(VIEW_META.unified?.purpose) : null}
             fmt={fmt} workDate={workDate} nowMs={nowMs} canOperate={canOperate} imgOf={imgOf}
           />
         ) : viewMode === 'chart' ? (
@@ -3378,6 +3379,9 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
             rounds={rounds} deliveries={deliveries} view={view} kanbanStd={kanbanStd} fmt={fmt} lineMap={lineMap}
             workDate={workDate} breakPolicies={breakPolicies} nowMs={nowMs}
           />
+        ) : viewMode === 'cards' ? (
+          /* 🎴 ตู้ e-Kanban — แผงของตัวเอง ไม่พึ่ง state ของบอร์ดเดิม (คนละข้อมูล คนละงาน) */
+          <KanbanCabinet role={role} />
         ) : viewMode === 'pull' ? (
           <PullBoard
             lotRequests={lotRequests} rawRequests={rawRequests} accumulator={accumulator}

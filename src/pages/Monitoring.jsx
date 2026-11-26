@@ -798,7 +798,7 @@ export default function Monitoring() {
         </Suspense>
       ) : !tabBoards.length ? (
         <div style={{ ...card, fontSize: FS + 1, lineHeight: 1.9 }}>
-          {tr("ยังไม่มีบอร์ดในหมวดนี้")} ({subDef.kinds.map(k => BOARD_TABS.find(t => t.key === k)?.sheets).filter(Boolean).join(' · ')})
+          {tr("ยังไม่มีบอร์ดในหมวดนี้")} ({subDef.kinds.map(k => tr(BOARD_TABS.find(t => t.key === k)?.sheets)).filter(Boolean).join(' · ')})
           {canEdit
             ? <> {tr('— กด')} <b>📥 {tr(importLabel('planner_monitoring'))}</b> {tr('แล้วเลือกไฟล์')} <code>1.Monitoring-&lt;เดือน&gt;.xlsx</code> {tr('ระบบจะสร้างบอร์ดให้ตามชีทในไฟล์')}</>
             : tr(" — ต้องมีสิทธิ์จัดการบอร์ดจึงจะนำเข้าได้")}

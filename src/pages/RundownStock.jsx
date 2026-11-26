@@ -70,7 +70,7 @@ export default function RundownStock() {
   useLiveBoard(load, { tables: ['line_stock_transactions'], topic: 'rundown-stock', rate: RATE.ANALYTIC });
 
   const custLabel = useCallback((code) => {
-    if (!code) return '— ไม่ระบุลูกค้า —';
+    if (!code) return tr("— ไม่ระบุลูกค้า —");
     const r = shipToMap[code];
     return r && r.customer_name && r.customer_name !== code ? `${r.customer_name} (${code})` : code;
   }, [shipToMap]);
@@ -214,7 +214,7 @@ export default function RundownStock() {
                     </th>
                     {(() => {
                       /* คอลัมน์ "ยกมา" = stock พร้อมส่งตอนนี้ — ป้าย/สีชุดเดียวกับคอลัมน์ยกมาของบอร์ด */
-                      const h = periodHead(today, { today, seed: true, seedBot: 'ตอนนี้' });
+                      const h = periodHead(today, { today, seed: true, seedBot: tr("ตอนนี้") });
                       const t = periodTone({ seed: true });
                       return (
                         <th style={{ padding: '6px 8px', fontSize: 11, textAlign: 'right', minWidth: 64, background: t.bg, borderLeft: t.edge, borderRight: t.edge }}>

@@ -164,7 +164,7 @@ export default function CostCenterRatePanel({ nodes, lines }) {
         <div style={{ fontSize: 11, color: 'var(--muted)', marginBottom: 8 }}>
           rate {tr("เป็นของ")} <b>{tr('รหัส Cost Center')}</b> {tr('(ไม่ได้ผูกกับไลน์) — ปกติบัญชีตั้งที่')} <b>{tr('ชั้นกลุ่ม')}</b> {tr("แล้วชั้นแผนก/ส่วนรวมขึ้นเองตามลำดับชั้นในผัง")}
           · <b>{tr("บัญชีส่ง rate รอบใหม่ = กด “＋ rate ใหม่")}”</b> ({tr("ประวัติเดิมคงไว้ โปรเจคเก่าคำนวณด้วย rate ณ ช่วงนั้น) — ปุ่ม ✏️ ไว้แก้เฉพาะตอนกรอกตัวเลขผิด")}
-          {noRateUsed > 0 && <span style={{ color: '#f59e0b', fontWeight: 700 }}> {tr('· ⚠ มี')} {noRateUsed} {tr('รหัสที่ไลน์ใช้อยู่แต่ยังไม่ตั้ง rate')}</span>}
+          {noRateUsed > 0 && <span style={{ color: 'var(--amber)', fontWeight: 700 }}> {tr('· ⚠ มี')} {noRateUsed} {tr('รหัสที่ไลน์ใช้อยู่แต่ยังไม่ตั้ง rate')}</span>}
           {otherCount > 0 && (
             <span> {tr('· ซ่อนรหัสระดับส่วน/แผนก')} {otherCount} {tr('รหัส')}{' '}
               <button onClick={() => setShowAllLevels(v => !v)} style={{ background: 'none', border: 'none', color: 'var(--accent)', fontSize: 11, fontWeight: 700, cursor: 'pointer', padding: 0 }}>
@@ -204,7 +204,7 @@ export default function CostCenterRatePanel({ nodes, lines }) {
                     <tr style={{ borderTop: '1px solid var(--border)' }}>
                       <td style={{ padding: '7px 10px', fontSize: 12, fontWeight: 700, fontFamily: 'monospace', color: 'var(--text)', whiteSpace: 'nowrap' }}>
                         {cc}
-                        {lns.length > 0 && !cur && <span title={tr('ไลน์ใช้รหัสนี้อยู่ แต่ยังไม่ตั้ง rate — cost saving ของไลน์นี้จะคำนวณไม่ได้')} style={{ marginLeft: 6, fontSize: 11, color: '#f59e0b', fontWeight: 800 }}>⚠</span>}
+                        {lns.length > 0 && !cur && <span title={tr('ไลน์ใช้รหัสนี้อยู่ แต่ยังไม่ตั้ง rate — cost saving ของไลน์นี้จะคำนวณไม่ได้')} style={{ marginLeft: 6, fontSize: 11, color: 'var(--amber)', fontWeight: 800 }}>⚠</span>}
                         {/* ⛔ ถอดธง "ไม่ใช่ 21406?" ออกแล้ว (2026-10-21 · คำสั่ง user
                             *"activity rate มันอิง cost center มันไม่ได้อิงไลน์"*)
                             ธงเดิมจุดชนวนจาก "มีไลน์ใช้รหัสนี้ + รหัสไม่ขึ้นต้น 21406" ซึ่งผิด 2 ชั้น:
@@ -328,7 +328,7 @@ export default function CostCenterRatePanel({ nodes, lines }) {
                         <button onClick={unlockDate} style={{ marginLeft: 6, background: 'none', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', color: 'var(--accent)', fontSize: 11, fontWeight: 800, cursor: 'pointer', padding: '1px 7px' }}>{tr('แก้วันที่')}</button>
                       </>
                     ) : (
-                      <span style={{ color: '#f59e0b', fontWeight: 700 }}>{tr("ปลดล็อกวันที่แล้ว — เปลี่ยนวันนี้ = เปลี่ยนย้อนหลังว่า rate นี้ครอบช่วงไหน cost saving ของโปรเจคที่คำนวณด้วย rate ช่วงนี้จะขยับตาม")}</span>
+                      <span style={{ color: 'var(--amber)', fontWeight: 700 }}>{tr("ปลดล็อกวันที่แล้ว — เปลี่ยนวันนี้ = เปลี่ยนย้อนหลังว่า rate นี้ครอบช่วงไหน cost saving ของโปรเจคที่คำนวณด้วย rate ช่วงนี้จะขยับตาม")}</span>
                     )}
                     <div style={{ marginTop: 3, opacity: 0.85 }}>
                       {tr("เวลาที่แก้ระบบบันทึกเอง: สร้าง")} {fmtStamp(form.created_at)} {tr('· แก้ล่าสุด')} {fmtStamp(form.updated_at)} ({tr("ใครแก้ดูได้ที่")} audit log)

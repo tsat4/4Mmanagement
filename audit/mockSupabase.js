@@ -474,10 +474,46 @@ const TABLE_ROWS = {
      · คละให้ครบทุกสาขา: ตั้ง min แล้ว · มีแถวแต่ไม่ใส่ min · ไม่มีแถวจุดเรียกเติมเลย · ยอดเหลือ 0
      · เว้นบางแถวไว้ที่ชื่อเดิม (i % 5 === 0) ให้ยังมี "ปลายทางที่ไม่ใช่ไลน์ผลิต" = ตัวนับ "กันออก"
        และ optgroup 🏬 คลัง ของตัวเลือกไลน์ยังถูกเรนเดอร์เหมือนเดิม */
+  /* 🔴 ยอดคงเหลือ **ติดลบได้จริง** (25/11) — วัดจากฐานจริง 85 คู่ติดลบ (−85,582 ชิ้นที่ไลน์ปลายทาง)
+     เดิม mock ไม่มีแถวติดลบเลย ⇒ สาย "ติดลบ" (คอลัมน์แดงในแผงรอบนับ · ตัวนับ negParts/negQty)
+     ไม่เคยถูกเรนเดอร์ใน harness — บทเรียนเดียวกับ pair_mat_no ข้างบน */
   line_stock_summary: (r, i) => ({ ...r, line_name: i % 5 === 0 ? r.line_name : LINE_NAME((i % 3) + 1),
-    qty_on_hand: i % 4 === 0 ? 0 : i * 120 }),
+    qty_on_hand: i % 4 === 0 ? 0 : i % 5 === 1 ? -(i * 80 + 60) : i * 120 }),
   line_part_levels: (r, i) => ({ ...r, line_name: LINE_NAME((i % 3) + 1), mat_no: `1010${1000 + (i % 8)}`,
     min_qty: i % 3 === 0 ? null : 40 * i, max_qty: 200 * i }),
+  /* 🔴 แถวปรับยอด — ต้องคละ "ไปนับของจริง" กับ "ตั้งยอดตามไฟล์" (2026-11-25)
+     แผง 🧭 รอบนับตั้งต้น (/line-stock?tab=count) แยก 2 อย่างนี้ด้วย `note` ที่ขึ้นต้น `ตรวจนับ:`
+     ถ้า mock ให้ note เดียวกันหมด ⇒ ทุกไลน์ได้สถานะ "ยังไม่เคยนับ" ⇒ สาย partial/done/driftAfter
+     (ป้ายสถานะ · NoticeBar "ปรับยอดหลังนับ") **ไม่เคยถูกเรนเดอร์ใน harness เลย** — บทเรียนเดียวกับ mtn_orders
+     คู่ (ไลน์, mat) ต้องตรงกับ line_stock_summary ไม่งั้นจับคู่ไม่ติดและยังเงียบเหมือนเดิม */
+  /* 🎴 ใบ e-Kanban — ต้องคละ **ทุกสถานะ** ไม่งั้นสาย in_box/picking/delivering + คิวหยิบของสโตร์
+     ไม่เคยถูกเรนเดอร์ใน harness · ต้องมีใบ "ไม่รู้โซน" (from_location ว่าง) ด้วย
+     ไม่งั้น NoticeBar "ยังไม่รู้โซนหยิบ" ไม่เคยขึ้น (2026-11-25) */
+  kanban_cards: (r, i) => ({ ...r,
+    card_no: `1010${1000 + (i % 8)}-${String((i % 4) + 1).padStart(2, '0')}`,
+    mat_no: `1010${1000 + (i % 8)}`, line_name: LINE_NAME((i % 3) + 1),
+    from_location: i % 5 === 0 ? null : `P4${10 + (i % 3)}`,
+    qty_per_card: 600, seq: (i % 4) + 1, total_cards: 4,
+    state: ['at_line', 'in_box', 'picking', 'delivering'][i % 4],
+    state_at: '2026-11-25T02:00:00Z',
+    suggested_at: i % 4 === 0 && i % 2 === 0 ? '2026-11-25T03:00:00Z' : null,
+    suggest_reason: i % 4 === 0 && i % 2 === 0 ? 'ผลิตไปแล้ว 600 ชิ้น ตั้งแต่ใบนี้ถึงไลน์' : null,
+    is_active: true }),
+  line_stock_transactions: (r, i) => {
+    /* 2 แถวต่อ 1 คู่ (ไลน์, mat) — คู่เดียวกับที่ line_stock_summary สร้าง (index j)
+       ไม่งั้น "การนับ" กับ "แถวสต็อก" คนละคู่กัน ⇒ จับคู่ไม่ติด แล้วทุกไลน์ได้ "ยังไม่เคยนับ" เหมือนเดิม */
+    const j = Math.floor(i / 2);
+    const everCounted = j % 4 !== 3;                 // คู่ที่ 4 ของทุกวง = ไม่เคยถูกนับ → สถานะ partial โผล่จริง
+    const isCount = everCounted && i % 2 === 0;      // นับก่อน (04/11) แล้วตั้งยอดทับทีหลัง (18/11) ⇒ driftAfter > 0
+    return { ...r,
+      line_name: LINE_NAME((j % 3) + 1), mat_no: `1010${1000 + j}`,
+      /* 🔴 ต้องมีใบ **pending** ด้วย — ช่องกรอกของพาร์ทที่มีใบค้างถูกปิด + NoticeBar "กันนับซ้ำ"
+         ถ้า mock approved ล้วน สายนั้นไม่เคยถูกเรนเดอร์ใน harness */
+      type: 'adjust', status: i % 7 === 3 ? 'pending' : 'approved', qty: (i % 2 ? 1 : -1) * (100 + i * 7),
+      note: isCount ? `ตรวจนับ: ระบบ ${j * 10} → นับได้ ${j * 10 + 5}`
+        : j % 2 ? 'ตั้งยอดให้ตรงไฟล์ Monitoring 300T' : 'ย้ายยอดรับเข้าล็อตไป STORE',
+      created_at: isCount ? '2026-11-04T02:00:00Z' : '2026-11-18T02:00:00Z' };
+  },
   /* 🔴 ใบแจ้งซ่อม MO — ต้องคละ **สถานะจริงของ workflow** (2026-10-06)
      เดิมทุกแถวได้ `status: 'open'` จาก ROW() ซึ่ง **ไม่ใช่สถานะของ mtn_orders เลย**
      ⇒ `nextStepOf()` คืน null ทุกแถว ⇒ โค้ดสาย "ใบนี้รอขั้นไหน / รอใคร" (ตัวกรองรอขั้นไหน ·
@@ -727,7 +763,9 @@ const TABLE_ROWS = {
     const k = Math.floor(i / 2);
     return { ...r, scope_kind: 'zone', scope_name: i % 2 ? 'MDB-10' : 'MDB', bucket_at: new Date(t).toISOString(), kw: 900, kw_max: 980, kwh_total: (i % 2 ? 5000 : 1000) + k * 15 };
   },
-  energy_panel_settings: (r, i) => ({ ...r, panel: i % 2 ? 'MDB-03' : 'MDB', demand_target_kw: i % 2 ? null : 1600 }),
+  /* 🌱 EF ไฟฟ้า (2026-11-25 · ห้ามถอด) — เดิมไม่มี utility_key ⇒ efFor() ไม่เจอ = การ์ด CO₂ บนบอร์ด + แท็บรายเดือนวาดแต่กิ่ง "ยังไม่ได้ตั้ง" */
+  energy_emission_factors: (r, i) => ({ ...r, utility_key: 'electric', kg_co2e: i % 2 ? 0.493 : 0.482, effective_from: i % 2 ? '2023-11-28' : '2026-10-21', source_ref: 'TGO (mock)' }),
+  energy_panel_settings: (r, i) => ({ ...r, panel: i % 2 ? 'MDB-03' : 'MDB', demand_target_kw: i % 2 ? null : 1600, baseline_start: i % 2 ? null : '12:00:00', baseline_end: i % 2 ? null : '12:50:00' }),
   integration_sources: (r, i) => ({
     ...r, kinds: i % 2 ? ['energy_readings', 'energy_events'] : ['machine_state', 'piece_count'],
     legacy_secret: false, key_hint: i % 3 ? 'ab12' : null,

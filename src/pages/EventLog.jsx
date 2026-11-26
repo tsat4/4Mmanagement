@@ -408,7 +408,7 @@ function CreateEventForm({ form, setForm, groupedEvents, lines, matrix, checkIte
           <select value={form.event_no} onChange={e => f('event_no', e.target.value)}>
             <option value="">{tr('-- เลือก Event --')}</option>
             {Object.entries(groupedEvents).map(([cat, evs]) => (
-              <optgroup key={cat} label={`Category ${cat}: ${CAT_META[cat].labelTh}`}>
+              <optgroup key={cat} label={`Category ${cat}: ${tr(CAT_META[cat].labelTh)}`}>
                 {evs.map(ev => (
                   <option key={ev.event_no} value={ev.event_no}>
                     #{ev.event_no} {ev.name_th || ev.name_en}
@@ -555,7 +555,7 @@ async function exportExcel(logs) {
   rows.push([
     'Date', 'Start Time', 'Operator', 'Weld cell Operator', 'Station Number',
     'Issue', 'Event (A)', 'Event (B)', 'Event (C)', 'Event ID', '',
-    'ส่วนงาน', 'รายละเอียดงานซ่อม', "Product Q'ty", "OK Q'ty", "NG Q'ty",
+    tr("ส่วนงาน"), 'รายละเอียดงานซ่อม', "Product Q'ty", "OK Q'ty", "NG Q'ty",
     "Rework(OK) Q'ty", "Scrap Q'ty", 'Approved by (Leader up)',
     'End Time before Start Production (QA)', 'Remark'
   ]);
@@ -861,15 +861,15 @@ function EventList({ logs, loading, onSelect, role, eventDefs }) {
           <>
             <button
               onClick={() => { exportExcel(filtered).catch(e => toast.error((tr('ทำไฟล์ Excel ไม่สำเร็จ') + ': ') + (e?.message || e))); }}
-              title="Export Excel"
+              title={tr('ส่งออก Excel')}
               style={{ padding: '4px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--green)40', background: 'var(--green-dim)', color: 'var(--green)', fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-              Export Excel
+              {tr('ส่งออก Excel')}
             </button>
             <button
               onClick={() => exportPDF(filtered)}
-              title="Export PDF / Print"
+              title={tr('ส่งออก PDF / พิมพ์')}
               style={{ padding: '4px 12px', borderRadius: 'var(--r-md)', border: '1px solid var(--blue)40', background: 'var(--blue-dim)', color: 'var(--blue)', fontSize: 11, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap' }}>
-              Export PDF
+              {tr('ส่งออก PDF')}
             </button>
           </>
         )}

@@ -25,6 +25,7 @@ import { orgNodeCompare, naturalCompare } from './listOrder.js';
 import { wavg, wLoad, wRun } from './oee.js';
 import { skillFit, skillMapOf, pendingMapOf } from './skillFit.js';
 import { costCenterOfNode } from './ccScope.js';
+import { tr } from './i18n.js';
 
 /** แถว (row) ของผังที่คนแต่ละตำแหน่งไปอยู่ */
 /** ถังคนที่ไม่มีแผนก (key ของ dept ใน buildManpowerBoard) — ใช้ร่วม lineDeptsOf */
@@ -943,7 +944,7 @@ export function lineStaffStatus({ familyLines = [], stationIds = new Set(), allS
   const gapPeople = fit?.gaps?.filter(g => g.shift === shift).length || 0;
   const base = { shift, std, onFloor, checked, short: null, gapPeople };
   if (std == null) return { ...base, status: 'none', reason: familyLines.length ? 'ยังไม่ตั้งกำลังคน (std)' : 'ไม่ใช่ไลน์ในทะเบียน' };
-  if (!checked) return { ...base, status: 'none', reason: `${shift === 'night' ? 'กะดึก' : 'กะเช้า'}ยังไม่เช็คชื่อ` };
+  if (!checked) return { ...base, status: 'none', reason: `${shift === 'night' ? 'กะดึก' : tr("กะเช้า")}ยังไม่เช็คชื่อ` };
   const short = Math.max(0, std - onFloor);
   const out = { ...base, short };
   if (short >= LINE_STAFF_SHORT_BAD) return { ...out, status: 'bad', reason: null };

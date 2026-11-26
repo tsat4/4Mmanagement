@@ -197,7 +197,7 @@ function ReportView({ setSp }) {
 
   const exportCsv = async () => {
     await loadDocForms().catch(() => null);
-    const headers = ['วันที่', 'กะ', 'ไลน์', 'เครื่อง', 'MAT', 'CT(s)', 'แผน(นาที)', 'เดินเครื่อง(นาที)', 'ชิ้นจากเครื่อง', 'NG หน้าเครื่อง', 'NG คนตัดสิน', 'A%', 'P%', 'Q%', 'OEE%', 'Alarm(ครั้ง)', 'หมายเหตุ'];
+    const headers = ['วันที่', trI18n("กะ"), trI18n("ไลน์"), trI18n("เครื่อง"), 'MAT', 'CT(s)', 'แผน(นาที)', 'เดินเครื่อง(นาที)', 'ชิ้นจากเครื่อง', 'NG หน้าเครื่อง', 'NG คนตัดสิน', 'A%', 'P%', 'Q%', 'OEE%', 'Alarm(ครั้ง)', trI18n("หมายเหตุ")];
     const body = rows.map(r => [
       r.workDate, r.shift === 'day' ? 'เช้า' : 'ดึก', r.lineName || '', r.machineNo, (r.ctInfo?.mats || []).join(' '), r.oee.ct ? Math.round(r.oee.ct * 10) / 10 : '',
       Math.round(r.oee.plannedSec / 60), Math.round(r.oee.operatingSec / 60), r.oee.pieces ?? '', r.oee.ngMachine, r.oee.ngPeople ?? '',

@@ -83,7 +83,7 @@ function getShiftInfo(date) {
   const m = date.getMinutes();
   const total = h * 60 + m;
   const isDay = total >= 480 && total < 1200;
-  return { isDay, label: isDay ? 'กะเช้า' : 'กะดึก', icon: isDay ? '☀️' : '🌙' };
+  return { isDay, label: isDay ? tr("กะเช้า") : 'กะดึก', icon: isDay ? '☀️' : '🌙' };
 }
 
 // การ์ดผังไลน์ย่อ — พิกัด pos_top/pos_left เป็น % ของ "ตัวรูปจริง" (มาตรฐานเดียวกับ LineSetup/Management)
@@ -411,7 +411,7 @@ export default function Dashboard({ view = 'timeline' }) {
           .select(ordCols.replace(', machine_no', '')).in('session_id', sessionIds));
       }
       if (oErr) miss.push('ใบผลิต');
-      if (dtErr) miss.push('เครื่องหยุด');
+      if (dtErr) miss.push(tr("เครื่องหยุด"));
       if (dfErr) miss.push('ของเสีย');
       oeeBlind = !!(oErr || dtErr || dfErr || pErr);
       (orders     || []).forEach(o => { (ordersBySession[o.session_id]  ||= []).push(o); });
@@ -792,7 +792,7 @@ export default function Dashboard({ view = 'timeline' }) {
       const e = m[s.line_name] || (m[s.line_name] = { ng: 0, byType: {} });
       e.ng += s.ngQty;
       (s.defectLogs || []).forEach(d => {
-        const k = d.dr_defect_types?.name_th || 'ไม่ระบุประเภท';
+        const k = d.dr_defect_types?.name_th || tr("ไม่ระบุประเภท");
         const t = e.byType[k] || (e.byType[k] = { name: k, qty: 0, notes: [] });
         t.qty += (d.qty_ng || 0) + (d.qty_suspect || 0);
         if (d.description) t.notes.push(d.description);
@@ -1021,7 +1021,7 @@ export default function Dashboard({ view = 'timeline' }) {
                 border: `1px solid ${selectedShift === 'day' ? 'var(--amber-line)' : 'var(--blue-line)'}`,
               }}>
                 {selectedShift === 'day' ? tr("☀️ กะเช้า") : tr("🌙 กะดึก")}
-                {isToday && selectedShift === (shiftInfo.isDay ? 'day' : 'night') && ' · กะปัจจุบัน'}
+                {isToday && selectedShift === (shiftInfo.isDay ? 'day' : 'night') && tr("· กะปัจจุบัน")}
               </span>
             )}
             <span style={{ fontSize: 14, color: 'var(--muted)', fontFamily: 'var(--font-display)' }}>
@@ -1097,8 +1097,8 @@ export default function Dashboard({ view = 'timeline' }) {
         const sl = buildStatusLine([
           { label: 'อัตราการมาทำงาน', value: attendRate, unit: '%', tone: attendRate == null ? 'none' : attendTone(attendRate), need: attendRate == null ? null : `${tr("อัตราการมาทำงาน")} ${attendRate}% (${tr("มา")} ${present.length} · ${tr("ขาด")} ${absent.length})` },
           { label: 'PPE ครบ', value: ppeRate, unit: '%', tone: ppeRate == null ? 'none' : ppeRate >= 90 ? 'good' : ppeRate >= 70 ? 'warn' : 'bad', need: ppeRate == null ? null : `PPE ${tr("ครบแค่")} ${ppeRate}% ${tr("ของคนที่มา")}` },
-          { label: 'OT', value: otCount, unit: 'คน', tone: 'none' },
-          { label: '4M รอ', value: visibleFourMLogs.length, unit: 'รายการ', tone: toneOf({ value: visibleFourMLogs.length, zeroIsGood: true, over: 'warn' }), need: `4M ${tr("รออนุมัติ")} ${visibleFourMLogs.length} ${tr("รายการ")}` },
+          { label: 'OT', value: otCount, unit: tr("คน"), tone: 'none' },
+          { label: '4M รอ', value: visibleFourMLogs.length, unit: tr("รายการ"), tone: toneOf({ value: visibleFourMLogs.length, zeroIsGood: true, over: 'warn' }), need: `4M ${tr("รออนุมัติ")} ${visibleFourMLogs.length} ${tr("รายการ")}` },
         ], { now });
         return (
           <div data-tv-item style={{ marginBottom: 12, fontSize: T(14, 22), lineHeight: 1.5, color: 'var(--text2)' }}>
@@ -1131,14 +1131,14 @@ export default function Dashboard({ view = 'timeline' }) {
                 รู้ว่าเขียวเพราะอะไร · คำว่า "เกณฑ์" ไม่ใช่ "เป้า" เพราะเป็นเกณฑ์ของจอนี้เอง
                 ยังไม่ใช่เป้าทางการจากทะเบียน KPI (ห้ามเขียน "เป้า" จนกว่าจะผูกของจริง) */
           {
-            label: 'พนักงานทั้งหมด', value: totalCapacity, unit: 'คน',
+            label: 'พนักงานทั้งหมด', value: totalCapacity, unit: tr("คน"),
             sub: `${tr("เช็คชื่อแล้ว")} ${present.length + absent.length} / ${totalCapacity} ${tr("คน")}`,
             tone: 'none',            // ยอดพนักงานในทะเบียน = ข้อเท็จจริง ไม่มีดี/แย่
             icon: '👥',
           },
           {
             label: 'อัตราการมาทำงาน', value: attendRate, unit: '%', primary: true,
-            sub: attendRate == null ? 'ยังไม่มีใครเช็คชื่อ — ตัวเลขยังตัดสินไม่ได้'
+            sub: attendRate == null ? tr("ยังไม่มีใครเช็คชื่อ — ตัวเลขยังตัดสินไม่ได้")
               : `${tr("มา")} ${present.length} · ${tr("ขาด")} ${absent.length}${totalCapacity - present.length - absent.length > 0 ? ` · ${tr("ยังไม่เช็ค")} ${totalCapacity - present.length - absent.length}` : ''} · ${tr("จาก")} ${totalCapacity} ${tr("คน")}`,
             // เกณฑ์เดิมของหน้านี้ (90 / 75) — คงพฤติกรรมไว้ แต่ให้ "สี" มาจากชุดกลาง + เขียนบนจอ
             tone: attendRate == null ? 'none'
@@ -1148,20 +1148,20 @@ export default function Dashboard({ view = 'timeline' }) {
           },
           {
             label: 'PPE ครบถ้วน', value: ppeRate, unit: '%',
-            sub: ppeRate == null ? 'ยังไม่มีคนมาให้ตรวจ' : `${ppeReady.length} / ${present.length} ${tr("คนที่มา")}`,
+            sub: ppeRate == null ? tr("ยังไม่มีคนมาให้ตรวจ") : `${ppeReady.length} / ${present.length} ${tr("คนที่มา")}`,
             tone: ppeRate == null ? 'none'
               : ppeRate >= 90 ? 'good' : ppeRate >= 70 ? 'warn' : 'bad',
             basis: ppeRate == null ? null : 'เกณฑ์จอนี้: เขียว ≥ 90% · เหลือง ≥ 70%',
             icon: '🦺',
           },
           {
-            label: 'OT วันนี้', value: otCount, unit: 'คน',
-            sub: present.length > 0 ? `${Math.round(otCount/present.length*100)}% ${tr("ของคนที่มา")}` : 'ไม่มีข้อมูล',
+            label: 'OT วันนี้', value: otCount, unit: tr("คน"),
+            sub: present.length > 0 ? `${Math.round(otCount/present.length*100)}% ${tr("ของคนที่มา")}` : tr("ไม่มีข้อมูล"),
             tone: 'none',            // OT เยอะ/น้อยไม่ได้แปลว่าดีหรือแย่ในตัวมันเอง ⇒ ห้ามทาส้มทิ้งไว้
             icon: '⏰',
           },
           {
-            label: '4M Alerts', value: visibleFourMLogs.length, unit: 'รายการ',
+            label: '4M Alerts', value: visibleFourMLogs.length, unit: tr("รายการ"),
             sub: visibleFourMLogs.length > 0 ? `${[...new Set(visibleFourMLogs.map(f => f.line_name))].length} ${tr("ไลน์ได้รับผลกระทบ")}` : 'ไม่มีการแจ้งเตือน',
             // เหลือง ไม่ใช่แดง — ให้ตรงกับการ์ด "4M รออนุมัติ" บนหน้าแรก (จอ 2 จอต้องพูดตรงกัน)
             tone: toneOf({ value: visibleFourMLogs.length, zeroIsGood: true, over: 'warn' }),
@@ -1353,7 +1353,7 @@ export default function Dashboard({ view = 'timeline' }) {
                         <span style={{ fontSize: T(isWide ? 42 : 34, 60), fontWeight: 800, fontFamily: 'var(--font-display)', color: 'var(--text)' }}>
                           {line.linePresent}
                         </span>
-                        <span style={{ fontSize: isWide ? 17 : 15, color: 'var(--muted)' }}>/ {line.lineTotal} {tr('คน')}{line._hasChildren && ' (รวมย่อย)'}</span>
+                        <span style={{ fontSize: isWide ? 17 : 15, color: 'var(--muted)' }}>/ {line.lineTotal} {tr('คน')}{line._hasChildren && tr("(รวมย่อย)")}</span>
                       </div>
                       <MiniBar value={line.linePresent} max={line.lineTotal} color={color} />
                       <div style={{ marginTop: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 6 }}>
@@ -1552,7 +1552,7 @@ export default function Dashboard({ view = 'timeline' }) {
             <div style={{ display: 'flex', gap: 14, flexWrap: 'wrap', marginBottom: 12, padding: '6px 10px', background: 'var(--bg2-surf)', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)' }}>
               {[
                 /* 🎨 พาเลต 5 สี (05/11): "เสร็จช้า" = เขียวเหมือนเสร็จ แยกด้วยไอคอน ✓! (เดิมส้ม — เฉดที่ 6) */
-                { t: 'info', icon: '▶', label: 'กำลังผลิต' },
+                { t: 'info', icon: '▶', label: tr("กำลังผลิต") },
                 { t: 'good', icon: '✓', label: 'เสร็จแล้ว' },
                 { t: 'good', icon: '✓!', label: 'เสร็จ (ปิดช้ากว่ากำหนด)' },
                 { t: 'bad', icon: '!', label: 'ล่าช้า' },
@@ -2228,7 +2228,7 @@ export default function Dashboard({ view = 'timeline' }) {
                                     <span style={{ fontSize: T(15, 26), fontWeight: 900, color: barColor, lineHeight: 1 }}>{rowActual}</span>
                                     <span style={{ fontSize: T(11, 18), color: 'var(--muted)' }}>/{rowDemand} {tr('ชิ้น ·')} {doneCount}/{row.cards.length}{tr('ใบ')}</span>
                                     {delayed > 0 && <span style={{ fontSize: T(11, 18), color: 'var(--red)', fontWeight: 700 }}>⚠️{delayed}{tr('ใบ')}</span>}
-                                    {isOpen && delayed === 0 && <span style={{ fontSize: T(11, 18), color: 'var(--green)', fontWeight: 700 }}>● Live</span>}
+                                    {isOpen && delayed === 0 && <span style={{ fontSize: T(11, 18), color: 'var(--green)', fontWeight: 700 }}>● {tr('สด')}</span>}
                                   </div>
                                   {/* 📋 แถบหลุดแผนของ "แถวนี้" (พาร์ท/ไลน์นี้) — เวลา + ยอด ในบรรทัดเดียว */}
                                   <div style={{ display: 'flex', gap: 5, minWidth: 0, overflow: 'hidden' }}>

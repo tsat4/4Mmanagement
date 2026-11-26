@@ -93,7 +93,7 @@ export default function ProcessTypeSetup({ role }) {
             <div style={{ flex: 1, minWidth: 0 }}>
               <span style={{ fontSize: 14, fontWeight: 700, color: it.color || 'var(--text)' }}>{tr(it.label)}</span>
               <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 8, fontFamily: 'monospace' }}>{it.key}</span>
-              {it.is_active === false && <span style={{ fontSize: 11, color: '#ef4444', marginLeft: 8 }}>{tr('ปิดใช้งาน')}</span>}
+              {it.is_active === false && <span style={{ fontSize: 11, color: 'var(--red)', marginLeft: 8 }}>{tr('ปิดใช้งาน')}</span>}
             </div>
             {canEdit && <>
               <button onClick={() => openEdit(it)} className="tbtn" style={{ ...cancelBtnStyle, padding: '5px 12px' }}>✏️</button>

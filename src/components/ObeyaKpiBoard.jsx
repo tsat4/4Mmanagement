@@ -6,6 +6,7 @@ import { lineNameCompare } from '../utils/lineHierarchy';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ComposedChart, Bar, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine, Cell, LabelList } from 'recharts';
 import { chartAnim } from '../utils/motion';
+import TabBody from './TabBody';   // 25/11: เปลี่ยนขอบเขต = cross-fade ทั้งกระดานครั้งเดียว (จังหวะเดียวกับสลับแท็บ)
 import { supabase, supabaseDR } from '../supabaseClient';
 import { loadLinesRes } from '../utils/useProductionLines';
 import { UserContext } from '../App';
@@ -161,6 +162,11 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
   const { index: org, ready: orgReady, failed: orgFailed } = useOrgScope(lines);   // ผังองค์กรทุกมิติ (23/09) — แทน org_nodes kind='section'
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  /* 🎞 25/11 (user: "เปลี่ยนไลน์แล้ว animation ดูพังๆ เด้งไปมา") — แผ่นไหลขึ้นทีละใบ (stagger) เล่นเฉพาะข้อมูลชุดแรกที่บอร์ดโผล่
+     เปลี่ยนขอบเขต/ปี = แผ่นส่วนใหญ่ remount (คีย์ = def id ของขอบเขตใหม่) + ลำดับแผ่นต่างกันได้ ⇒ ให้ทั้งกริด cross-fade ครั้งเดียว
+     (`<TabBody tab={data.viewKey}>`) แผ่นข้างในโผล่ทันที (`enter={false}`) · เลขวิ่ง/แท่งยืดยังเล่นตามกฎ chartAnim เหมือนเดิม */
+  const firstViewRef = useRef(null);
+  if (data?.viewKey && firstViewRef.current == null) firstViewRef.current = data.viewKey;   // ชุดแรกที่โผล่ = ชุดเดียวที่ได้ stagger
   const [err, setErr] = useState(null);
   const [showSafety, setShowSafety] = useState(null);   // null | {} | event
   const [board, setBoard] = useState(() => urlBool('board', false)); // โหมดจอ TV = ซ่อนหัวเพจ เต็มจอ · ?board=1 จากจอวนหน้า
@@ -281,7 +287,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
   }, [scope, org, scopeOpts]);
   const parentScope = useMemo(() => (scope && !isPlant(scope) ? org.ancestorsOf(scope.kind, scope.value).slice(-1)[0] || PLANT : null), [scope, org]);
   const secSet = useMemo(() => (scope ? org.sectionsOf(scope.kind, scope.value) : null), [scope, org]);   // null = ไม่จำกัด
-  const scopeText = useMemo(() => scopePathText(org, scope, 'ทั้งโรงงาน'), [scope, org]);   // CC = เส้นทางเจ้าของ › 💰 รหัส (utils/orgScope)
+  const scopeText = useMemo(() => scopePathText(org, scope, tr("ทั้งโรงงาน")), [scope, org]);   // CC = เส้นทางเจ้าของ › 💰 รหัส (utils/orgScope)
 
   /* ── โหลด — ทุกก้อนเช็ค error → warn[] เพื่อขึ้นแถบ "โหลดไม่ครบ" ห้ามเงียบ ─────────────────────
      deps เป็น primitive ล้วน (กฎเหล็ก DB ข้อ 9) · lineNames ส่งเป็นสตริงคั่นด้วย | */
@@ -390,6 +396,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
         sessions: roll.sessions || [], defects: roll.defects || [],
         openSess: (op.rows || []).length, targets: tg.data || [],
         safety, safetyMissing, actions, actsMissing, kdefs, kdefsBelow, kentries, kplans, knotes, kbase, kcsat, kemps, kpiMissing, warn, mtnRoll, layoutKeys,
+        viewKey: `${scopeKeyStr}|${year}`,   // 25/11: ขอบเขต+ปีของ "ข้อมูลชุดนี้" — คีย์ cross-fade ของกริด (ไม่ใช่ URL ที่เปลี่ยนก่อนข้อมูลมา)
       });
     } catch (e) {
       if (seq === reqRef.current) { setErr(e?.message || 'โหลดข้อมูลไม่สำเร็จ'); setData(null); }
@@ -424,7 +431,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
     const fxB = applyFormulaEntries([...(kdefs || []), ...(kdefsBelow || [])], entByKpi, baseIdxB, org);
     Object.assign(entByKpi, fxB.entries);
     const fInfoB = fxB.info;
-    const skLabelB = (sk) => { const i = String(sk).indexOf(':'); return i < 0 ? 'ทั้งโรงงาน' : org.labelOf(sk.slice(0, i), sk.slice(i + 1)); };
+    const skLabelB = (sk) => { const i = String(sk).indexOf(':'); return i < 0 ? tr("ทั้งโรงงาน") : org.labelOf(sk.slice(0, i), sk.slice(i + 1)); };
     /* เป้า/นิยาม = ของขอบเขตที่เลือกก่อน ไม่มีค่อยไต่ขึ้นบรรพบุรุษทีละชั้น (แผนก → ส่วนงาน → ฝ่าย → โรงงาน)
        แหล่งเดียวกับแท็บ ⚙️ ห้ามตั้งคนละที่ · `inherited` = เอามาจากระดับแม่ (จอต้องบอก) */
     const chain = org.chainOf(scope.kind, scope.value);   // CC → เจ้าของรหัส → แม่ … → โรงงาน (06/10)
@@ -858,9 +865,9 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
     /* 09/10 (user "remark เยอะไป ซ้ำกันทุกการ์ด"): แผ่นที่คาดไม่ได้ **ไม่เขียนบรรทัดนี้** — ไปรวมเป็นชิปเดียวใต้บอร์ด (`warnLines`)
        ว่ามีกี่แผ่นที่ยังไม่มีแผนรายเดือน · บนแผ่นเหลือเฉพาะตอนคำนวณได้จริง */
     if (f.value == null) return null;
-    const verdict = f.status === 'good' ? { t: '✅ คาดถึงเป้า', c: 'var(--green)' }
+    const verdict = f.status === 'good' ? { t: tr("✅ คาดถึงเป้า"), c: 'var(--green)' }
       : f.status === 'warn' ? { t: '🟡 ถึงแค่ Commitment', c: 'var(--amber)' }
-      : f.status === 'bad' ? { t: '❌ คาดไม่ถึงเป้า', c: 'var(--red)' } : null;
+      : f.status === 'bad' ? { t: tr("❌ คาดไม่ถึงเป้า"), c: 'var(--red)' } : null;
     const nAs = f.assumedMonths?.length || 0;
     const assumeTxt = nAs ? (f.assumed?.kind === 'slope' ? `${tr("เดือนที่เหลือ")} ${nAs} ${tr("ด. สมมติเพิ่มต่อเท่าอัตราเดิม")}` : `${tr("เดือนที่เหลือ")} ${nAs} ${tr("ด. สมมติทำได้เท่าค่าเฉลี่ย")} ${nf(f.assumed?.rate, r.dec)}${r.unit ? ' ' + r.unit : ''}`) : '';
     return (
@@ -1404,6 +1411,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
           ) : !scope ? (
             <div style={{ padding: 40, textAlign: 'center', color: 'var(--muted)' }}>{tr('กำลังเลือกขอบเขตเริ่มต้น…')}</div>
           ) : (
+            <TabBody tab={data?.viewKey || ''} style={{ height: '100%', minHeight: 0 }}>
             <div style={sheetsBox}>
               {pageItems.filter((x) => x.kind === 'kpi').map(({ row: r }, sheetIdx) => (
                 <div key={r.key} style={{ position: 'relative', minHeight: 0, display: 'grid' }}>
@@ -1413,7 +1421,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
                     <button onClick={() => moveSheet(r.key, 1)} disabled={rows[rows.length - 1]?.key === r.key} title={tr('เลื่อนไปถัดไป')} style={{ ...navBtn, fontSize: 13, padding: '2px 8px' }}>▶</button>
                   </div>
                 )}
-                <Sheet k={k} cw={cw} idx={sheetIdx} icon={r.icon} title={r.name} statZoom goals={(kk, zoomedCopy) => goalsRow(r, kk, zoomedCopy)} footAside
+                <Sheet k={k} cw={cw} idx={sheetIdx} enter={firstViewRef.current === data?.viewKey} icon={r.icon} title={r.name} statZoom goals={(kk, zoomedCopy) => goalsRow(r, kk, zoomedCopy)} footAside
                   /* 30/09 (user): เลขใหญ่ = ค่าเดือนที่เลือก · บรรทัดรอง = YTD บอกวิธีรวม+จำนวนเดือน · ท้ายแผ่น = คาดปลายปี
                      16/11 (user): กดชิปสถานะ = เปิด popup 🔍 (insight) ไม่ใช่พาไปหน้ากรอก — ปุ่ม "กรอก/ตั้งเป้า" ท้ายแผ่นยังไปหน้ากรอกเหมือนเดิม */
                   sub={`${r.curChild ? tr('⬆ ค่ารวมจากหน่วยลูก (เดือนนี้ระดับนี้ไม่ได้กรอก)') : srcLabel(r)}${r.ytd != null
@@ -1444,7 +1452,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
               {has('todo') && (
               <Sheet k={k} cw={cw} icon="🚨" title={tr('งานที่ต้องตามแก้')}
                 sub={`action ${tr("จากประชุมเช้า/ห้อง Obeya + เหตุความปลอดภัยที่ยังไม่ปิด")}${data?.actsMissing ? tr(' · ⚠ ยังไม่มีตารางติดตาม') : ''}`}
-                big={todo.length ? String(overdue || todo.length) : '0'} unit={overdue ? 'รายการเกินกำหนด' : 'รายการค้าง'}
+                big={todo.length ? String(overdue || todo.length) : '0'} unit={overdue ? 'รายการเกินกำหนด' : tr("รายการค้าง")}
                 stat={todo.length
                   ? (overdue ? { status: 'bad', label: `${tr("เกินกำหนด")} ${overdue}`, why: `${tr("มี")} ${overdue} ${tr("รายการเลยวันครบกำหนดแล้วยังไม่ปิด")}` }
                     : { status: 'warn', label: `${tr("ค้าง")} ${todo.length}`, why: 'ยังมีงานค้างที่ยังไม่ปิด' })
@@ -1475,6 +1483,7 @@ export default function ObeyaKpiBoard({ tabs, tab, onTab }) {
               </Sheet>
               )}
             </div>
+            </TabBody>
           )}
         </div>
       </div>

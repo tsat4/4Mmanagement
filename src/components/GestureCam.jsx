@@ -199,7 +199,7 @@ export default function GestureCam({ onGesture, onError }) {
         {tr("กล้องทำงาน (ในเครื่อง")})
       </div>
       {lastAction && (
-        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.55)', fontSize: 13, fontWeight: 900, color: '#4ade80', textAlign: 'center', padding: 6 }}>
+        <div style={{ position: 'absolute', inset: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: 'rgba(0,0,0,0.55)', fontSize: 13, fontWeight: 900, color: 'var(--green)', textAlign: 'center', padding: 6 }}>
           {lastAction}
         </div>
       )}

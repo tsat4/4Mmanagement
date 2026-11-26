@@ -20,7 +20,7 @@ import { qtyText, splitPlanForSession, matchPlanToActual } from '../utils/planLo
 import { fetchAllPages } from '../utils/fetchByIds';
 
 import { tr } from '../utils/i18n';
-const shiftLabel = (sh) => (sh === 'night' ? 'กะดึก' : 'กะเช้า');
+const shiftLabel = (sh) => (sh === 'night' ? tr("กะดึก") : tr("กะเช้า"));
 /* 🎨 25/11 สีดิบ → token · `pending` เดิมใช้ `--border2` **เป็นสีตัวอักษร** = #343b4b บนพื้นเข้ม
    (อ่านไม่ออกจริงๆ — วัดจากจอ 26 จุด) ⇒ ใช้ `--muted` ซึ่งเป็นสีข้อความรองจริง */
 const STATE_COLOR = { done: 'var(--green)', partial: 'var(--blue)', pending: 'var(--muted)' };

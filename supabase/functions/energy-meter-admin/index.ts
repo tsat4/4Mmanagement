@@ -13,7 +13,8 @@
             🔴 scope_name = คีย์ข้อมูล/ประวัติ ห้ามเปลี่ยน — ชื่อบนจอแก้ที่ display_name
             🔴 parent_name ต้องเป็นตู้ที่อยู่บนบอร์ดแล้ว · ห้ามชี้ตัวเอง · ห้ามวน
      remove { scope_kind, scope_name }  — มีตู้ลูกชี้มาอยู่ = ห้ามลบ (ทะเบียนจับคู่ด้วยข้อความ · fail-closed)
-     panel_target { panel, demand_target_kw|null }  — เป้า Demand 15 นาทีของตู้ (energy_panel_settings · 25/11)
+     panel_target { panel, demand_target_kw?, baseline_start?, baseline_end? }  — ค่าตั้งของตู้ (energy_panel_settings)
+            เป้า Demand 15 นาที (25/11) · ช่วง Baseline HH:MM (26/11) · ส่งเฉพาะช่องที่จะแก้
             ตู้ต้องมีมิเตอร์อยู่บนบอร์ด · ว่าง = ล้างเป้า (การ์ดเขียน "ยังไม่ได้ตั้งเป้า") */
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
@@ -58,14 +59,27 @@ Deno.serve(async (req) => {
   if (body?.action === 'panel_target') {
     const panel = str(body?.panel, 80);
     if (!panel) return json({ error: 'ต้องระบุตู้ (panel)' }, 400);
-    const t = num(body?.demand_target_kw);
-    if (t === 'bad' || t === 0) return json({ error: 'เป้าต้องเป็นตัวเลขมากกว่า 0 (เว้นว่าง = ไม่ตั้งเป้า)' }, 400);
+    // 26/11: แก้เฉพาะช่องที่ส่งมา (ไม่ส่ง = ไม่แตะ) — บันทึกเป้าอย่างเดียวห้ามล้างช่วง baseline และกลับกัน
+    const row: Record<string, unknown> = { panel, updated_at: new Date().toISOString(), updated_by: who };
+    if ('demand_target_kw' in (body || {})) {
+      const t = num(body.demand_target_kw);
+      if (t === 'bad' || t === 0) return json({ error: 'เป้าต้องเป็นตัวเลขมากกว่า 0 (เว้นว่าง = ไม่ตั้งเป้า)' }, 400);
+      row.demand_target_kw = t;
+    }
+    if ('baseline_start' in (body || {}) || 'baseline_end' in (body || {})) {
+      const hm = (v: unknown) => { const x = str(v, 8); return x == null ? null : (/^([01]\d|2[0-3]):[0-5]\d(:00)?$/.test(x) ? x.slice(0, 5) : 'bad'); };
+      const a = hm(body.baseline_start), b = hm(body.baseline_end);
+      if (a === 'bad' || b === 'bad') return json({ error: 'เวลา baseline ต้องเป็น HH:MM (24 ชม.)' }, 400);
+      if ((a == null) !== (b == null)) return json({ error: 'ช่วง baseline ต้องมีทั้งเวลาเริ่มและเวลาจบ (หรือว่างทั้งคู่)' }, 400);
+      if (a != null && b != null && a >= b) return json({ error: 'เวลาเริ่ม baseline ต้องก่อนเวลาจบ (ช่วงข้ามเที่ยงคืนยังไม่รองรับ)' }, 400);
+      row.baseline_start = a; row.baseline_end = b;
+    }
     const { count, error: ce } = await sb.from('energy_live_meters').select('scope_name', { count: 'exact', head: true }).eq('panel', panel);
     if (ce) return json({ error: ce.message }, 500);
     if (!count) return json({ error: `ไม่พบตู้ "${panel}" บนบอร์ด` }, 404);
     const { data, error } = await sb.from('energy_panel_settings')
-      .upsert({ panel, demand_target_kw: t, updated_at: new Date().toISOString(), updated_by: who }, { onConflict: 'panel' })
-      .select('panel, demand_target_kw, updated_at, updated_by');
+      .upsert(row, { onConflict: 'panel' })
+      .select('panel, demand_target_kw, baseline_start, baseline_end, updated_at, updated_by');
     if (error) return json({ error: error.message }, 500);
     if (!data?.length) return json({ error: 'บันทึกไม่สำเร็จ (0 แถว)' }, 500);
     return json({ ok: true, panel: data[0] });

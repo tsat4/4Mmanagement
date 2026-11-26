@@ -497,10 +497,10 @@ function PartHead({ part, board, shortAt, racks = null, raw = null, level = null
             ? <span title={tr('ข้อมูลไม่พอ — ห้ามตอบว่าพอหรือไม่พอ')}> {tr('· เทียบงานท้ายไลน์ไม่ได้')}</span>
             : (raw.cover.enough
               ? <span style={{ color: 'var(--accent)' }}> {tr('· เหล็กพอ (เหลือ')} {fmtN(raw.cover.diff, 1)} {tr("กก.")})</span>
-              : <span style={{ color: '#f87171', fontWeight: 700 }}> {tr('· เหล็กขาด')} {fmtN(-raw.cover.diff, 1)} {tr('กก.')}</span>)}
+              : <span style={{ color: 'var(--red)', fontWeight: 700 }}> {tr('· เหล็กขาด')} {fmtN(-raw.cover.diff, 1)} {tr('กก.')}</span>)}
         </div>
       ) : null}
-      {shortAt ? <div style={{ color: '#f87171', fontWeight: 700, fontSize: FS - 0.5 }}>{tr('⚠ ของขาด')} {shortAt.slice(5)}</div> : null}
+      {shortAt ? <div style={{ color: 'var(--red)', fontWeight: 700, fontSize: FS - 0.5 }}>{tr('⚠ ของขาด')} {shortAt.slice(5)}</div> : null}
       {!part.in_registry && part.mat_no ? (
         <div style={{ color: 'var(--accent2)', fontSize: FS - 1 }} title={tr('พาร์ทนี้ยังไม่อยู่ในทะเบียนสินค้า (dr_products) ⇒ ระบบดึงยอดผลิต/CT ให้ไม่ได้')}>
           ⚠ {tr("ยังไม่อยู่ในทะเบียนสินค้า")}

@@ -129,7 +129,7 @@ const facHealthTextOf = (st) => {
   if (st.supTemp) return '🟡 เครื่องใช้ได้ชั่วคราว';
   if (st.pmOverdue) return `⚠ PM ${tr("เกิน")} ${st.pmOverdue}`;
   if (st.pmDueSoon) return `PM ${tr("ใกล้ครบ")} ${st.pmDueSoon}`;
-  return '🔧 ปกติ';
+  return tr("🔧 ปกติ");
 };
 // ไลน์ผลิต — รวมทุกสัญญาณ เอาตัวแย่สุดตัดสินสี · ข้อความต้องบอก "เหตุผล" เสมอ ห้ามให้เดาจากสี
 const prodHealthSignals = (s) => {
@@ -171,7 +171,7 @@ const prodHealthCat = (s) => {
 };
 const prodHealthText = (s) => {
   const sig = prodHealthSignals(s);
-  if (!sig.length) return s.hasOpen ? '✓ ปกติ' : '⏸ ยังไม่เปิดกะ';
+  if (!sig.length) return s.hasOpen ? ("✓ " + tr("ปกติ")) : '⏸ ยังไม่เปิดกะ';
   const t = sig.slice(0, 2).map(x => x.txt).join(' · ');
   return sig.length > 2 ? `${t} +${sig.length - 2}` : t;   // เกิน 2 เหตุ = นับบอก ห้ามตัดเงียบ
 };
@@ -294,13 +294,13 @@ const METRICS = {
     label: 'Downtime', worstFirst: true, desc: true, facilityNA: true,
     // sidebar อันดับ = สะสมทั้งวันงาน (นอกแผน + รวมเวลาที่กำลังหยุด)
     value: s => s.dtMin,
-    text: s => s.dtActive ? `🔴 ${tr("หยุด")} ${fmtDtElapsed(s.dtOpenMin)}` : s.dtMin > 0 ? `${s.dtMin} ${tr("นาที")}` : (s.hasOpen ? 'ไม่มี' : ''),
+    text: s => s.dtActive ? `🔴 ${tr("หยุด")} ${fmtDtElapsed(s.dtOpenMin)}` : s.dtMin > 0 ? `${s.dtMin} ${tr("นาที")}` : (s.hasOpen ? tr("ไม่มี") : ''),
     cat: s => s.dtActive ? 'down' : !s.hasOpen && s.dtMin === 0 ? 'idle' : s.dtMin === 0 ? 'good' : s.dtMin < 30 ? 'ok' : 'bad',
     // สีบนแผนที่ = downtime "สะสมเฉพาะชั่วโมงปัจจุบัน" (รีเซ็ตทุกต้นชั่วโมง) — ≤5น.เขียว · ≤15น.เหลือง · >15น.แดง
     //   กำลังหยุดอยู่ (ยังไม่กลับมารัน) = แดงต่อเนื่อง · เพิ่งกลับมารัน = คิดตามนาทีที่หยุดในชั่วโมงนี้
     //   📅 โหมดทบทวน = ทั้งวัน ⇒ ใช้เกณฑ์ cat/text ของทั้งวัน (เกณฑ์รายชั่วโมงใช้กับยอดทั้งวันไม่ได้)
     mapCat: s => s.reviewMode ? METRICS.breakdown.cat(s) : s.dtActive ? 'down' : !s.hasOpen && s.dtMinHour === 0 ? 'idle' : s.dtMinHour <= 5 ? 'good' : s.dtMinHour <= 15 ? 'ok' : 'bad',
-    mapText: s => s.reviewMode ? METRICS.breakdown.text(s) : s.dtActive ? `🔴 ${tr("หยุด")} ${fmtDtElapsed(s.dtOpenMin)}` : s.dtMinHour > 0 ? `${s.dtMinHour} ${tr("น./ชม.นี้")}` : (s.hasOpen ? '✓ ปกติ' : ''),
+    mapText: s => s.reviewMode ? METRICS.breakdown.text(s) : s.dtActive ? `🔴 ${tr("หยุด")} ${fmtDtElapsed(s.dtOpenMin)}` : s.dtMinHour > 0 ? `${s.dtMinHour} ${tr("น./ชม.นี้")}` : (s.hasOpen ? ("✓ " + tr("ปกติ")) : ''),
     short: s => s.dtActive ? `🔴 ${fmtDtElapsed(s.dtOpenMin)}` : s.dtMinHour > 0 ? `${s.dtMinHour}${tr("น.")}` : '',
   },
   ng: {
@@ -1626,7 +1626,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
           loadPairMap(),   // cache ทะเบียนสินค้ากลาง (25/09)
           loadBreakPolicies(),   // ล้ม = โยน ⇒ แผงบอกโหลดไม่สำเร็จ (ห้ามถือว่า "ไม่มีพัก" แล้วหักซ้ำ)
         ]);
-        const orders = need(ordRes, 'ใบผลิต'), dts = need(dtRes, 'เครื่องหยุด'), rvDefs = need(defRes, 'ของเสีย');
+        const orders = need(ordRes, 'ใบผลิต'), dts = need(dtRes, tr("เครื่องหยุด")), rvDefs = need(defRes, 'ของเสีย');
         // น้ำหนัก wLoad = shift_min − planned ที่ "หักได้จริง" (ตัดส่วนที่ทับพักออก · กฎเหล็ก OEE downtime ทับพัก)
         const effBySess = dtMinBySession(sessions, dts || [], rvBreaks || [], { lines: flowByLineRef.current, affectsBy: affectsLnRef.current });   // หารเลนไลน์เครื่องขนาน (oee.js §3.2)
         const rvNgBySess = {}; (rvDefs || []).forEach(d => { rvNgBySess[d.session_id] = (rvNgBySess[d.session_id] || 0) + (Number(d.qty_ng) || 0) + (Number(d.qty_suspect) || 0); });
@@ -1730,7 +1730,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
             : Math.round(d.duration_min != null ? Number(d.duration_min) || 0
               : (d.started_at && d.ended_at ? Math.max(0, (new Date(d.ended_at) - new Date(d.started_at)) / 60000) : 0));
           return { id: d.id, session_id: d.session_id, mins, machine: d.machine_no, note: d.description,
-            type: d.dr_downtime_types?.name_th || 'ไม่ระบุประเภท', planned: d.dr_downtime_types?.category === 'planned',
+            type: d.dr_downtime_types?.name_th || tr("ไม่ระบุประเภท"), planned: d.dr_downtime_types?.category === 'planned',
             open, carry_over: d.carry_over, shift: sessById[d.session_id]?.shift };
         }).sort((a, b) => (b.mins ?? 0) - (a.mins ?? 0));
         const dtUnplanned = dtRows.filter(d => !d.planned);
@@ -1739,7 +1739,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
         // ของเสีย — รวมตามประเภท
         const defByType = {};
         (defRes.data || []).forEach(d => {
-          const k = d.dr_defect_types?.name_th || 'ไม่ระบุประเภท';
+          const k = d.dr_defect_types?.name_th || tr("ไม่ระบุประเภท");
           const e = defByType[k] || (defByType[k] = { type: k, ng: 0, suspect: 0, repair: 0, notes: [] });
           e.ng += d.qty_ng || 0; e.suspect += d.qty_suspect || 0; e.repair += d.qty_repair || 0;
           if (d.description) e.notes.push(d.description);
@@ -1803,7 +1803,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
             pmRows = plRes.rows.map(p => {
               const cl = clById[p.checklist_id], j = jigById[cl?.equipment_id];
               const { bucket, daysTo } = planDueBucket(p, today, { frequency: cl?.frequency, soonDays: 7 });
-              return { key: p.checklist_id, name: j?.jig_no || j?.name || 'อุปกรณ์ (ไม่พบชื่อ)',
+              return { key: p.checklist_id, name: j?.jig_no || j?.name || tr("อุปกรณ์ (ไม่พบชื่อ)"),
                 sub: j?.jig_no && j?.name && j.jig_no !== j.name ? j.name : '', dept: cl?.department, am: isAmTeam(cl?.department),
                 due: p.next_due_date, days: daysTo, bucket, lastDone: p.last_done_at };
             }).filter(r => !r.am || r.bucket !== 'run_day')
@@ -3524,7 +3524,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
                 {tr("โซนคลังสินค้า")} · {tr(km.label)} — <span style={{ color: zm.color, fontWeight: 700 }}>{zoneHealthText(f)}</span>
               </div>
               <div style={{ display: 'grid', gap: 6 }}>
-                {row('📦 ของในโซน', f.mats.length ? `${f.totQty.toLocaleString()} ${tr("ชิ้น")} · ${f.unknownPkg ? `${f.totPkgs}+?` : f.totPkgs} ${tr("กล่อง")}` : 'ยังไม่ผูก MAT', f.mats.length ? undefined : 'var(--muted)')}
+                {row('📦 ของในโซน', f.mats.length ? `${f.totQty.toLocaleString()} ${tr("ชิ้น")} · ${f.unknownPkg ? `${f.totPkgs}+?` : f.totPkgs} ${tr("กล่อง")}` : tr("ยังไม่ผูก MAT"), f.mats.length ? undefined : 'var(--muted)')}
                 {row('🧺 ความจุ', z.capacity_pkg ? `${z.capacity_pkg} ${tr("กล่อง")}${f.fillPct != null ? ` · ${tr("ใช้ไป")} ${f.fillPct}%` : ''}` : 'ยังไม่กรอก', z.capacity_pkg ? undefined : 'var(--muted)')}
                 {row('🏷 MAT ที่ผูก', `${f.mats.length} ${tr("รายการ")}`)}
                 {f.shortCount > 0 && row('🟥 ต่ำกว่า Min', `${f.shortCount} ${tr("รายการ")}`, 'var(--red)')}
@@ -3702,7 +3702,7 @@ export default function FactoryMap({ setupMode = false, viewParam = 'view' }) {
         const s = story;
         const pct = s && s.totTarget > 0 ? Math.round(s.totProduced / s.totTarget * 100) : null;
         const kids = childrenOf[storyLine] || [];
-        const sh = (v) => v === 'day' ? '☀️ กะเช้า' : v === 'night' ? '🌙 กะดึก' : (v || '—');
+        const sh = (v) => v === 'day' ? tr("☀️ กะเช้า") : v === 'night' ? '🌙 กะดึก' : (v || '—');
         /* 🔎 แท็บที่เลือก = เลนส์ (2026-10-16 · user "คลิกไลน์ ควรโชว์เรื่องที่เกี่ยวกับ tab ที่เลือก + คู่กับผังเลย์เอาต์")
            หัวข้อ/เลนส์ผังตัดสินที่ utils/lineLens.js · ซ่อนแล้วต้องบอกบนหัว + ปุ่มดูทุกเรื่อง (ห้ามหายเงียบ) */
         const sections = storySectionsFor(metric);

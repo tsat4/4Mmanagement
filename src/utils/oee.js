@@ -32,6 +32,7 @@
 
 // งานคู่ gang die / RH-LH — ยุบเป็น "1 shot" ก่อนคิดเวลามาตรฐานของ %P (ดูกติกา ชิ้น≠shot ในไฟล์นั้น)
 import { collapsePairShots } from './pairTotals.js';
+import { tr } from './i18n.js';
 // §8 computeSessionOee ต้องรู้โหมดไลน์/จำนวนสถานีขนาน (source of truth = lineTypes.js · ไม่มี import วนกลับ)
 import { parallelUnitsOf, flowModeOf } from './lineTypes.js';
 /* 🏷️ คีย์เลขเครื่อง — `machine_no` เป็นข้อความอิสระ (SW10 vs SW-10 = เครื่องเดียวกัน)
@@ -1070,7 +1071,7 @@ export function groupLean({ axis = 'six_big_loss', downtimes = [], defects = [],
   downtimes.forEach(d => {
     const ty = d.dr_downtime_types || {};
     if (!includePlanned && ty.category === 'planned') return;
-    put(ty[axis], ty.name_th || 'ไม่ระบุประเภท', { min: Number(d.duration_min) || 0, count: 1 });
+    put(ty[axis], ty.name_th || tr("ไม่ระบุประเภท"), { min: Number(d.duration_min) || 0, count: 1 });
   });
   defects.forEach(d => {
     const ty = d.dr_defect_types || {};
@@ -1193,7 +1194,8 @@ export const isSuspectPending = (d) => suspectState(d) === 'pending';
    🔴 ใช้เฉพาะแถวที่ "ใบเหลืองครอบ NG" — ผลรวม `qty` ของใบเหลือง ≥ NG + สงสัย **และ** ไม่มีใบแดงตรง
       (`from_yellow_id` ว่าง = NG ถูกส่งลงแดงตรงจากโมดัลลงถังแบบเก่า) ไม่ครอบ = **พฤติกรรมเดิมเป๊ะ**
       (NG นับเสมอ + ของสงสัยตาม §7.1) ⇒ แถวก่อน 05/11 / ตั้งแท็กไม่สำเร็จ / ไม่ได้ถาม embed — เลขเท่าเดิม
-   ⚠️ %P ไม่ขยับ (ใช้ `defectQtyAll`) · ชิ้นที่ซ่อมกลับมาดี "ไม่ถูกหัก" แต่ยังไม่ถูกบวกเข้ายอดผลิต */
+   ⚠️ %P ไม่ขยับตอน QA ตัดสิน (ตัวเศษ %P ใช้ `defectQtyForP` = นับทุกชิ้นที่เครื่องทำออกมาตั้งแต่แรก §7.2.1)
+      · ชิ้นที่ซ่อมกลับมาดี "ไม่ถูกหัก %Q" แต่**ยังไม่ถูกบวกเข้ายอดสแกน** (การ์ดถูกสแกนไปแล้วตอนผลิต) */
 const binRows = (d) => {
   const b = d?.quality_bin_records;
   if (b === undefined || b === null) return null;
@@ -1207,12 +1209,18 @@ const binRows = (d) => {
 export function binCoveredSplit(d) {
   const ng = Number(d?.qty_ng) || 0;
   const sus = Number(d?.qty_suspect) || 0;
-  if (!(ng > 0)) return null;                          // ไม่มี NG = §7.1 เดิมตอบครบแล้ว
+  /* 🔧 25/11 (คำสั่ง user) — ชิ้นที่ "ส่งซ่อม" เข้าถังเหลืองแล้ว (`binPiecesOf` ใน qualityBin.js)
+     ⇒ ต้องอยู่ในการแบ่งก้อนนี้ด้วย ไม่งั้นผลซ่อมไม่มีทางไหลกลับมาแก้ %Q ของกะต้นทาง
+     · ซ่อมแล้วดี (`return_date`/`good`/`use_as_is`) → `cleared` = ไม่หัก %Q (เหมือนเดิม)
+     · ซ่อมแล้วเสีย (`scrap`/ลงถังแดง)             → `scrap`   = หัก %Q ของ**กะที่ทำมันออกมา**
+     · ยังไม่ตัดสิน                                  → `pending` = จอเขียน "รอพิจารณา" (ไม่หัก) */
+  const rep = Number(d?.qty_repair) || 0;
+  if (!(ng > 0) && !(rep > 0)) return null;            // ไม่มี NG/ซ่อม = §7.1 เดิมตอบครบแล้ว
   const rows = binRows(d);
   if (!rows) return null;                              // ไม่ได้ถาม = พฤติกรรมเดิม
   if (rows.some(r => r.bin === 'red' && r.from_yellow_id == null)) return null;   // NG ลงแดงตรง
   const yellows = rows.filter(r => r.bin === 'yellow');
-  const total = ng + sus;
+  const total = ng + sus + rep;
   const yQty = yellows.reduce((a, y) => a + (Number(y.qty) || 0), 0);
   if (!yellows.length || yQty < total) return null;    // ใบเหลืองไม่ครอบ NG
   let scrap = 0, cleared = 0, pending = 0;
@@ -1282,7 +1290,12 @@ export const defectQtyAll = (d) => (Number(d?.qty_ng) || 0) + (Number(d?.qty_sus
 export const defectQtyForP = (d) => defectQtyAll(d) + (Number(d?.qty_repair) || 0);
 
 /** ชิ้นที่รอซ่อม/รอยืนยันหลังซ่อมของแถวนี้ — ไม่ใช่ของดี ไม่ใช่ของเสีย ⇒ **จอต้องเขียนบอก** */
-export const reworkPendingQty = (d) => Number(d?.qty_repair) || 0;
+export const reworkPendingQty = (d) => {
+  /* 🔧 มีใบถังครอบแล้ว = `suspectPendingQty()` รายงาน "รอพิจารณา" ให้ครบอยู่แล้ว (รวมชิ้นรอซ่อม)
+     ⇒ ที่นี่คืน 0 ไม่งั้นจอนับซ้ำ 2 ที่ · ไม่มีใบถัง (แถวเก่า/ตั้งแท็กไม่สำเร็จ) = ยังต้องเขียนบอก */
+  if (binCoveredSplit(d)) return 0;
+  return Number(d?.qty_repair) || 0;
+};
 
 /** รวมชิ้นรอซ่อมทั้งชุด — จอเอาไปเขียน "รอซ่อม N ชิ้น · ยังไม่นับเป็นของดี" */
 export const sumReworkPending = (rows) =>

@@ -978,7 +978,7 @@ export default function ProductionPlan() {
                 const top = d.plan.includes('holiday_work') ? PLAN_META.holiday_work : d.plan.includes('recall75') ? PLAN_META.recall75 : d.plan.includes('night') ? PLAN_META.night : d.plan.includes('ot') ? PLAN_META.ot : d.plan.includes('day') ? PLAN_META.day : null;
                 const dd = new Date(`${d.date}T12:00:00`);
                 return (
-                  <div key={d.date} title={`${fmtDate(d.date)}${d.sd75 ? tr(' (หยุดจ่าย 75% — ม.75)') : d.holiday ? tr(' (วันหยุด)') : ''}\n${tr("ดิววันนี้")} ${Math.round(d.duePcs).toLocaleString()} ${tr("ชิ้น")} (${d.dueLoad.toFixed(2)} ${tr("กะ)\\nแผน")}: ${d.plan.map(p => tr(PLAN_META[p]?.label) || p).join(' ') || (d.holiday ? tr('หยุด') : tr('ว่าง'))}\n${tr("ค้างยกไป")} ${d.backlog.toFixed(2)} ${tr("กะ")}`}
+                  <div key={d.date} title={`${fmtDate(d.date)}${d.sd75 ? tr(' (หยุดจ่าย 75% — ม.75)') : d.holiday ? tr(' (วันหยุด)') : ''}\n${tr("ดิววันนี้")} ${Math.round(d.duePcs).toLocaleString()} ${tr("ชิ้น")} (${d.dueLoad.toFixed(2)} ${tr("กะ")})\n${tr("แผน")}: ${d.plan.map(p => tr(PLAN_META[p]?.label) || p).join(' ') || (d.holiday ? tr('หยุด') : tr('ว่าง'))}\n${tr("ค้างยกไป")} ${d.backlog.toFixed(2)} ${tr("กะ")}`}
                     style={{ flexShrink: 0, width: 40, textAlign: 'center' }}>
                     <div style={{ fontSize: 11, color: d.sd75 ? 'var(--blue)' : d.holiday ? 'var(--red)' : 'var(--muted)' }}>{weekdaysMin()[dd.getDay()]}</div>
                     <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text2)' }}>{dd.getDate()}</div>

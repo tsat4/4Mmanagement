@@ -134,7 +134,7 @@ export default function TaxonomyManagerModal({ table, title, extraField = 'color
                   </div>
                   {canEditRow(r) ? <>
                     <button onClick={() => openEdit(r)} style={{ padding: '3px 8px', borderRadius: 'var(--r-md)', fontSize: 11, border: '1px solid var(--accent)', background: 'var(--accent-dim)', color: 'var(--accent)', cursor: 'pointer' }}>{tr('แก้ไข')}</button>
-                    <button onClick={() => remove(r)} style={{ padding: '3px 8px', borderRadius: 'var(--r-md)', fontSize: 11, border: '1px solid rgba(224,92,74,0.3)', background: 'rgba(224,92,74,0.1)', color: '#e05c4a', cursor: 'pointer' }}>{tr('ลบ')}</button>
+                    <button onClick={() => remove(r)} style={{ padding: '3px 8px', borderRadius: 'var(--r-md)', fontSize: 11, border: '1px solid rgba(224,92,74,0.3)', background: 'rgba(224,92,74,0.1)', color: 'var(--red)', cursor: 'pointer' }}>{tr('ลบ')}</button>
                   </> : <span title={lockNote(r)} style={{ fontSize: 11, color: 'var(--muted)', whiteSpace: 'nowrap' }}>{tr('ดูอย่างเดียว')}</span>}
                 </div>
               ))}

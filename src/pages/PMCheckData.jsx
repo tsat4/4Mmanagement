@@ -421,8 +421,8 @@ function VariableRow({ cp, idx, r, onChange, methodIndex, calcText }) {
         {cp.unit && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{cp.unit}</span>}
         <span style={{ fontSize: 11, color: 'var(--muted)', marginLeft: 'auto' }}>
           {cp.nominal != null && <>N:{fmt(cp.nominal)} </>}
-          {cp.lsl != null && <span style={{ color: '#e05c4a' }}>L:{fmt(cp.lsl)} </span>}
-          {cp.usl != null && <span style={{ color: '#e05c4a' }}>U:{fmt(cp.usl)}</span>}
+          {cp.lsl != null && <span style={{ color: 'var(--red)' }}>L:{fmt(cp.lsl)} </span>}
+          {cp.usl != null && <span style={{ color: 'var(--red)' }}>U:{fmt(cp.usl)}</span>}
         </span>
       </div>
     </div>
@@ -583,7 +583,7 @@ function NgRecheckPanel({ result, cp, onSaved, canRecord = false, deptWrite = nu
   if (!canRecord) {
     return (
       <div style={{ marginTop: 6, borderRadius: 'var(--r-md)', background: 'rgba(224,92,74,0.06)', border: '1px solid rgba(224,92,74,0.25)', padding: '8px 12px' }}>
-        <p style={{ fontSize: 11, color: '#e05c4a', fontWeight: 700, textTransform: 'uppercase', margin: 0 }}>{tr('NG — ยังไม่มี action')}</p>
+        <p style={{ fontSize: 11, color: 'var(--red)', fontWeight: 700, textTransform: 'uppercase', margin: 0 }}>{tr('NG — ยังไม่มี action')}</p>
         <p style={{ fontSize: 11.5, color: 'var(--muted)', margin: '2px 0 0', lineHeight: 1.45 }}>
           {deptWrite && !deptWrite.ok
             ? teamBlockText(deptWrite, 'ผลตรวจของทีมนี้')
@@ -595,7 +595,7 @@ function NgRecheckPanel({ result, cp, onSaved, canRecord = false, deptWrite = nu
 
   return (
     <div style={{ marginTop: 6, borderRadius: 'var(--r-md)', background: 'rgba(224,92,74,0.06)', border: '1px solid rgba(224,92,74,0.25)', padding: '8px 12px', display: 'flex', flexDirection: 'column', gap: 6 }}>
-      <p style={{ fontSize: 11, color: '#e05c4a', fontWeight: 700, textTransform: 'uppercase', margin: 0 }}>{tr('NG — ต้องการ action')}</p>
+      <p style={{ fontSize: 11, color: 'var(--red)', fontWeight: 700, textTransform: 'uppercase', margin: 0 }}>{tr('NG — ต้องการ action')}</p>
       <textarea value={action} onChange={e => setAction(e.target.value)} rows={2} placeholder={tr('อธิบายการแก้ไข...')} />
       {cp.type === 'variable' && (
         <div>
@@ -902,7 +902,7 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
             <div style={{ display: 'flex', gap: 6, marginTop: 4 }}>
               <span style={{ fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 'var(--r-md)', background: insp.status === 'pass' ? 'var(--accent-dim)' : insp.status === 'fail' ? 'rgba(224,92,74,0.12)' : 'var(--bg3)', color: insp.status === 'pass' ? 'var(--accent)' : insp.status === 'fail' ? '#e05c4a' : 'var(--muted)' }}>{insp.status?.toUpperCase()}</span>
               {insp.approval_status === 'approved' && <span style={{ fontSize: 11, color: 'var(--accent)', border: '1px solid var(--accent)', padding: '2px 6px', borderRadius: 'var(--r-md)' }}>{tr('✓ อนุมัติแล้ว')}</span>}
-              {insp.approval_status === 'rejected' && <span style={{ fontSize: 11, color: '#e05c4a', border: '1px solid #e05c4a', padding: '2px 6px', borderRadius: 'var(--r-md)' }}>{tr('✕ ตีกลับ')}</span>}
+              {insp.approval_status === 'rejected' && <span style={{ fontSize: 11, color: 'var(--red)', border: '1px solid #e05c4a', padding: '2px 6px', borderRadius: 'var(--r-md)' }}>{tr('✕ ตีกลับ')}</span>}
             </div>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', color: 'var(--muted)', fontSize: 20, cursor: 'pointer' }}>×</button>
@@ -955,7 +955,7 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
             )
           })}
           {insp.notes && <div style={{ borderRadius: 'var(--r-md)', border: '1px solid var(--border)', background: 'var(--card-surf)', padding: 10 }}><p style={{ fontSize: 11, color: 'var(--muted)', margin: 0 }}>{tr('หมายเหตุ')}</p><p style={{ fontSize: 13, color: 'var(--text)', margin: '2px 0 0' }}>{insp.notes}</p></div>}
-          {insp.approval_status === 'rejected' && insp.reject_reason && <div style={{ borderRadius: 'var(--r-md)', border: '1px solid rgba(224,92,74,0.3)', background: 'rgba(224,92,74,0.06)', padding: 10 }}><p style={{ fontSize: 11, color: '#e05c4a', margin: 0 }}>{tr('เหตุผลที่ตีกลับ')}</p><p style={{ fontSize: 13, color: 'var(--text)', margin: '2px 0 0' }}>{insp.reject_reason}</p></div>}
+          {insp.approval_status === 'rejected' && insp.reject_reason && <div style={{ borderRadius: 'var(--r-md)', border: '1px solid rgba(224,92,74,0.3)', background: 'rgba(224,92,74,0.06)', padding: 10 }}><p style={{ fontSize: 11, color: 'var(--red)', margin: 0 }}>{tr('เหตุผลที่ตีกลับ')}</p><p style={{ fontSize: 13, color: 'var(--text)', margin: '2px 0 0' }}>{insp.reject_reason}</p></div>}
         </div>
 
         <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)', display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -970,7 +970,7 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
           {canApprove && insp.approval_status === 'pending' && !rejecting && (
             <div style={{ display: 'flex', gap: 8 }}>
               <button onClick={handleApprove} disabled={approving} style={{ flex: 1, padding: '8px 0', borderRadius: 'var(--r-md)', border: '1px solid var(--accent)', background: 'var(--accent-dim)', color: 'var(--accent)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{approving ? tr('กำลังบันทึก...') : (isAm ? tr('อนุมัติ') : tr('ยืนยันผลตรวจ'))}</button>
-              <button onClick={() => setRejecting(true)} disabled={approving} style={{ padding: '8px 14px', borderRadius: 'var(--r-md)', border: '1px solid #e05c4a', background: 'rgba(224,92,74,0.08)', color: '#e05c4a', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{tr('ตีกลับ')}</button>
+              <button onClick={() => setRejecting(true)} disabled={approving} style={{ padding: '8px 14px', borderRadius: 'var(--r-md)', border: '1px solid #e05c4a', background: 'rgba(224,92,74,0.08)', color: 'var(--red)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{tr('ตีกลับ')}</button>
             </div>
           )}
           {rejecting && (
@@ -978,16 +978,80 @@ function HistoryModal({ inspection, checkpoints: cpsFromPage, jig, onClose, user
               <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)} rows={2} placeholder={tr('ระบุเหตุผลที่ตีกลับ...')} />
               <div style={{ display: 'flex', gap: 8 }}>
                 <button onClick={() => { setRejecting(false); setRejectReason('') }} style={{ padding: '8px 14px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'var(--bg3-surf)', color: 'var(--muted)', fontSize: 12, cursor: 'pointer' }}>{tr('ยกเลิก')}</button>
-                <button onClick={handleReject} disabled={approving || !rejectReason.trim()} style={{ flex: 1, padding: '8px 0', borderRadius: 'var(--r-md)', border: '1px solid #e05c4a', background: 'rgba(224,92,74,0.08)', color: '#e05c4a', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{approving ? tr('กำลังบันทึก...') : tr('ยืนยันตีกลับ')}</button>
+                <button onClick={handleReject} disabled={approving || !rejectReason.trim()} style={{ flex: 1, padding: '8px 0', borderRadius: 'var(--r-md)', border: '1px solid #e05c4a', background: 'rgba(224,92,74,0.08)', color: 'var(--red)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{approving ? tr('กำลังบันทึก...') : tr('ยืนยันตีกลับ')}</button>
               </div>
             </div>
           )}
           <div style={{ display: 'flex', gap: 8 }}>
-            <button onClick={() => handleExport('pdf')} disabled={!!exporting} style={{ flex: 1, padding: '8px 0', borderRadius: 'var(--r-md)', border: '1px solid rgba(224,92,74,0.4)', background: 'rgba(224,92,74,0.1)', color: '#e05c4a', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{exporting === 'pdf' ? tr('กำลัง export...') : 'PDF'}</button>
+            <button onClick={() => handleExport('pdf')} disabled={!!exporting} style={{ flex: 1, padding: '8px 0', borderRadius: 'var(--r-md)', border: '1px solid rgba(224,92,74,0.4)', background: 'rgba(224,92,74,0.1)', color: 'var(--red)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{exporting === 'pdf' ? tr('กำลัง export...') : 'PDF'}</button>
             <button onClick={() => handleExport('excel')} disabled={!!exporting} style={{ flex: 1, padding: '8px 0', borderRadius: 'var(--r-md)', border: 'none', background: 'var(--accent)', color: 'var(--accent-ink)', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>{exporting === 'excel' ? tr('กำลัง export...') : 'Excel'}</button>
           </div>
         </div>
       </motion.div>
+    </div>
+  )
+}
+
+/* 🔩 แถวกรอกค่าชิม (Shim Record) — ชิ้นเดียวใช้ร่วม ใบเดี่ยว + ใบรวมสถานี AM (26/11 แยกออกมาจากใบเดี่ยว ไม่เปลี่ยนหน้าตา)
+   points = ทุกจุดของเครื่อง (นับหัว/ถึงรอบ) · shown = จุดที่โชว์แถว · pinnedIds = จุดที่ปักบนรูปแล้ว */
+function ShimRecordSection({ points, shown, shimKinds, shimVals, setShimVals, canShim, pinnedIds, rowRefs, scrollMarginTop = 0 }) {
+  const kindOf = (code) => shimKinds.find(k => k.code === code) || { icon: '🔩', label: code || '—' }
+  const dueN = points.filter(pt => pointDueStatus(pt, { currentShot: null }).due).length
+  return (
+    <div style={{ marginTop: 12 }}>
+      <div style={{ padding: '7px 12px', borderRadius: 'var(--r-md)', marginBottom: 8, background: 'var(--blue-dim)', border: '1px solid var(--blue-line)', fontSize: 12.5, fontWeight: 800, color: SHIM_PIN_COLOR }}>
+        {tr("จุดชิม")} (Shim Record) · {points.length} {tr('จุด')}{dueN ? <span style={{ color: 'var(--red)' }}> {tr('· ถึงรอบ')} {dueN}</span> : null}
+        <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)', marginTop: 2 }}>
+          {tr("วัดค่าชิมรวมตอนนี้แล้วกรอกเป็น mm — บันทึกพร้อมใบตรวจนี้ลงประวัติชิมของจุด (ไม่บังคับ · จุดที่ไม่กรอก = ไม่แตะ")})
+          {pinnedIds.size < points.length && <span> · {points.length - pinnedIds.size} {tr('จุดยังไม่ปักบนรูป — ปักที่ /fixture แท็บทะเบียนจุด')}</span>}
+        </div>
+      </div>
+      {!canShim && (
+        <NoticeBar tone="warn" style={{ marginBottom: 8 }}>
+          {tr("บัญชีนี้ดูค่าชิมได้แต่บันทึกไม่ได้ — ต้องมีสิทธิ์ fixture_shim:record (admin เปิดให้ที่")} /permissions)
+        </NoticeBar>
+      )}
+      {shown.map(pt => {
+        const st = shimStack(pt)
+        const due = pointDueStatus(pt, { currentShot: null })
+        const v = shimVals[pt.id] ?? { mm: '', note: '' }
+        const mm = v.mm === '' ? null : Number(v.mm)
+        const act = deriveShimAction(pt.current_shim_mm, mm)
+        const pinned = pinnedIds.has(pt.id)
+        const overMax = mm != null && pt.max_shim_mm != null && mm > Number(pt.max_shim_mm)
+        const k = kindOf(pt.kind_code)
+        return (
+          <div key={pt.id} ref={el => { rowRefs.current[`shim:${pt.id}`] = el }}
+            style={{ ...S.cpRow(null), borderColor: overMax ? 'var(--red)' : mm != null ? SHIM_PIN_COLOR : 'var(--border)', scrollMarginTop }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+              <span style={{ minWidth: 22, height: 18, padding: '0 5px', borderRadius: 'var(--r-md)', background: pinned ? SHIM_PIN_COLOR : 'var(--border2)', color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} title={pinned ? tr('ปักบนรูปแล้ว') : tr('ยังไม่ปักบนรูป')}>{pt.point_no}</span>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{k.icon} {tr(k.label)}{pt.name ? <span style={{ fontWeight: 500, color: 'var(--muted)' }}> · {pt.name}</span> : null}</span>
+              <span style={{ fontSize: 11.5, color: 'var(--muted)', marginLeft: 'auto' }}>
+                {tr("ชิมรวม")} <b style={{ color: st.level === 'over' ? 'var(--red)' : st.level === 'warn' ? 'var(--amber)' : 'var(--text)' }}>{st.current ?? '—'}</b> {tr('/ เพดาน')} {pt.max_shim_mm ?? tr("ไม่ตั้ง")} mm
+                {due.level !== 'unset' && <span style={{ marginLeft: 8, color: due.due ? 'var(--red)' : due.level === 'soon' ? 'var(--amber)' : 'var(--muted)' }}>· {due.text}</span>}
+              </span>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+              <label style={{ fontSize: 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                {tr('ค่าชิมรวมที่วัดได้')}
+                <input type="number" step="0.01" inputMode="decimal" value={v.mm} disabled={!canShim} placeholder="mm"
+                  onChange={e => setShimVals(prev => ({ ...prev, [pt.id]: { ...v, mm: e.target.value } }))}
+                  style={{ width: 84, textAlign: 'center', fontFamily: 'monospace' }} />
+                <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>mm</span>
+              </label>
+              <input value={v.note} disabled={!canShim} placeholder={tr('หมายเหตุ (แผ่นที่ซ้อน/เหตุผล)')}
+                onChange={e => setShimVals(prev => ({ ...prev, [pt.id]: { ...v, note: e.target.value } }))}
+                style={{ flex: '1 1 160px', minWidth: 120 }} />
+              {mm != null && (
+                <span style={{ fontSize: 11.5, fontWeight: 700, color: overMax ? 'var(--red)' : SHIM_PIN_COLOR }}>
+                  {act === 'check' ? tr("→ ยืนยันเท่าเดิม") : act === 'add' ? `→ ${tr("เพิ่ม")} +${(mm - Number(pt.current_shim_mm)).toFixed(2)} mm` : `→ ${tr("ลด")} ${(mm - Number(pt.current_shim_mm)).toFixed(2)} mm`}
+                  {overMax && ' · เกินเพดาน — ควรเปิดใบซ่อมเปลี่ยนชิ้นส่วน'}
+                </span>
+              )}
+            </div>
+          </div>
+        )
+      })}
     </div>
   )
 }
@@ -1007,13 +1071,31 @@ const pmHasInput = (results, notes) => !!(notes && String(notes).trim())
    · บันทึกล้มกลางทาง = ตัวที่บันทึกแล้วไม่บันทึกซ้ำ (savedIds) + บอกบนจอว่าล้มที่ตัวไหน
    📄 docs/modules/pm-hub-check-setup.md §🧩 สถานี AM */
 function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, deptWrite, amLineWrite = null, userId, userRole, fullName, myPosition,
-  myEmployeeId, isSharedAccount, inspectorCode, setInspectorCode, checkedThisShift, ownerTeamOf, onSavedJig, onQueueMo, onOpenSingle, isMobileView = false }) {
+  myEmployeeId, isSharedAccount, inspectorCode, setInspectorCode, checkedThisShift, ownerTeamOf, onSavedJig, onQueueMo, onOpenSingle, isMobileView = false,
+  canShim = false, shimKinds = DEFAULT_POINT_KINDS }) {
   const [sec, setSec] = useState({ key: '', status: 'loading', list: [], err: '' })   // list: [{ jig, checklistId, cps, ngHist }]
   const [results, setResults] = useState({})
   const [notes, setNotes] = useState('')
   const [saving, setSaving] = useState(false)
   const [savedIds, setSavedIds] = useState(() => new Set())
   const rowRefs = useRef({})
+  /* 🖼️ รูปเครื่อง + หมุดจุดตรวจ ต่อเครื่อง (25/11 · feedback หน้างาน "ใบรวมมองไม่เห็นรูปที่จะตรวจ")
+     ตัววาดตัวเดียวกับใบเดี่ยว `JigSpinCheck` · เฟรม = jig_images (ไม่มี → image_path เป็นเฟรมเดียว)
+     อ่านรูปไม่ได้ = ใบยังตรวจ/บันทึกได้ + เขียนบอกบนจอ (ไม่ล้มทั้งใบ) */
+  const [framesByJig, setFramesByJig] = useState({ key: '', map: {}, err: '' })
+  const [activeCp, setActiveCp] = useState(null)
+  /* 🔩 จุดชิม (Shim Record) ต่อเครื่อง (26/11 · คำสั่ง user "ทำหมุดจุดชิมในใบรวมด้วย") — ชุดเดียวกับใบเดี่ยว:
+     หมุดม่วงบนรูป + แถวกรอก `ShimRecordSection` + บันทึกผ่าน `recordShimEvent` ผูก inspection_id ของเครื่องนั้น
+     อ่านจุดชิมไม่ได้ = ใบยังตรวจ/บันทึกได้ + เขียนบอก (ไม่บังคับกรอก = เหมือนใบเดี่ยว) */
+  const [shimByJig, setShimByJig] = useState({ key: '', map: {}, err: '' })
+  const [shimVals, setShimVals] = useState({})
+  const [wide, setWide] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 1180px)').matches)
+  useEffect(() => {
+    const mq = window.matchMedia('(min-width: 1180px)')
+    const on = () => setWide(mq.matches)
+    mq.addEventListener('change', on)
+    return () => mq.removeEventListener('change', on)
+  }, [])
   const memberKey = memberJigs.map(j => j.id).join(',')
   const loadKey = `${station.id}|${memberKey}|${amDept}`
   /* 📝 ร่างในเครื่อง (มือถือ · 23/11 · ชุดเดียวกับใบเดี่ยว utils/formDraft.js) — คีย์ = สถานี|สมาชิก|ทีม|คนกรอก
@@ -1037,7 +1119,24 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
           const ngHist = await loadNgHistory(jig).catch(e => ({ byCp: {}, machine: null, error: String(e?.message || e) }))
           list.push({ jig, checklistId: cl?.id ?? null, cps: data ?? [], ngHist })
         }
+        const imgRes = await supabaseDR.from('jig_images').select('id, jig_id, image_path, sort').in('jig_id', memberJigs.map(j => j.id)).order('sort')
         if (!alive) return
+        const fmap = {}
+        for (const j of memberJigs) {
+          let fr = (imgRes.data ?? []).filter(im => im.jig_id === j.id).map(im => ({ id: im.id, url: getPublicUrl(im.image_path) }))
+          if (!fr.length && j.image_path) fr = [{ id: 'legacy', url: getPublicUrl(j.image_path) }]
+          fmap[j.id] = fr
+        }
+        setFramesByJig({ key: loadKey, map: fmap, err: imgRes.error ? (imgRes.error.message || String(imgRes.error)) : '' })
+        const mids = [...new Set(memberJigs.map(j => j.machine_id).filter(Boolean))]
+        const shRes = mids.length
+          ? await supabaseDR.from('fixture_points').select('*').in('machine_id', mids).eq('is_active', true).order('sort_order')
+          : { data: [], error: null }
+        if (!alive) return
+        const smap = {}
+        for (const j of memberJigs) smap[j.id] = j.machine_id ? (shRes.data ?? []).filter(pt => pt.machine_id === j.machine_id) : []
+        setShimByJig({ key: loadKey, map: smap, err: shRes.error ? (shRes.error.message || String(shRes.error)) : '' })
+        setShimVals({})
         const init = {}
         list.forEach(m => m.cps.forEach(c => { init[c.id] = { v1: '', v2: '', v3: '', attr: '', note: '', mval: '', reason: '', reasonAccepted: false } }))
         setResults(init)
@@ -1141,6 +1240,7 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
 
       // ผลข้างเคียงรายอุปกรณ์ที่บันทึกสำเร็จ (ชุดเดียวกับใบเดี่ยว)
       const planErrs = []
+      let shimOk = 0; const shimWarns = []
       for (const d of done) {
         if (d.overall === 'fail') {
           notifyDepartment(amDept, {
@@ -1154,7 +1254,18 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
         }
         handleDailyPmSave({ jig: d.m.jig, department: amDept, overall: d.overall, ngTopics: d.ngTopics }).catch(() => {})
         onSavedJig?.(d.m.jig.id, d.overall)
+        // 🔩 ค่าชิมของเครื่องนี้ → ประวัติชิม ผูกใบตรวจของเครื่องนั้น (ล้ม = บอก ห้ามให้ใบตรวจล้มตาม · กติกาใบเดี่ยว)
+        const shimEntries = (shimByJig.map[d.m.jig.id] || []).map(pt => [pt, shimVals[pt.id]])
+          .filter(([, v]) => v && v.mm !== '' && v.mm != null && !Number.isNaN(Number(v.mm)))
+        if (shimEntries.length && !canShim) shimWarns.push(`${shortName(d.m.jig)}: ${tr('บัญชีนี้ไม่มีสิทธิ์ fixture_shim:record — ค่าชิมไม่ถูกบันทึก')}`)
+        else for (const [pt, v] of shimEntries) {
+          const res = await recordShimEvent({ point: pt, afterMm: Number(v.mm), action: deriveShimAction(pt.current_shim_mm, Number(v.mm)), reason: 'wear', note: v.note, byName: fullName, shotAtEvent: null, inspectionId: d.insp.id })
+          if (res.ok) shimOk++; else shimWarns.push(`${shortName(d.m.jig)} ${pt.point_no}: ${res.error}`)
+          if (res.warn) shimWarns.push(res.warn)
+        }
       }
+      if (shimOk) toast.success(`${tr("บันทึกค่าชิม")} ${shimOk} ${tr("จุดลงประวัติแล้ว")}`)
+      if (shimWarns.length) toast.error(`${tr("ชิมบางจุดไม่สำเร็จ")}: ${[...new Set(shimWarns)].join(' · ')}`)
       if (planErrs.length) toast.error(`${tr('บันทึกผลตรวจสำเร็จ แต่เลื่อนรอบแผนไม่สำเร็จ')}: ${planErrs.join(' · ')}`)
       setSavedIds(prev => { const n = new Set(prev); done.forEach(d => n.add(d.m.jig.id)); return n })
 
@@ -1192,6 +1303,12 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
         </div>
       </div>
       <DraftRestoreBar draft={pendingDraft} what={`${tr('ใบสถานี')} ${station.name}`} onRestore={restoreDraft} onDiscard={discardDraft} />
+      {shimByJig.key === loadKey && shimByJig.err && (
+        <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 8 }}>⚠ {tr('โหลดจุดชิมไม่สำเร็จ — ตรวจตามรายการได้ตามปกติ แต่กรอกค่าชิมในใบนี้ไม่ได้')} ({shimByJig.err})</div>
+      )}
+      {framesByJig.key === loadKey && framesByJig.err && (
+        <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 8 }}>⚠ {tr('โหลดรูปเครื่องไม่สำเร็จ — ตรวจตามรายการได้ตามปกติ')} ({framesByJig.err})</div>
+      )}
       {!allSaved && (
         <div style={{ position: 'sticky', top: 0, zIndex: 3, background: 'var(--card)', padding: '6px 0', marginBottom: 8, fontSize: 12.5, display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
           <b>{tr('ตรวจแล้ว')} {doneCps}/{totalCps}</b>
@@ -1220,7 +1337,17 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
             </div>
             {m.ngHist?.error && <div style={{ fontSize: 11.5, color: 'var(--amber)', margin: '0 0 6px' }}>⚠ {tr('อ่านประวัติการตรวจครั้งก่อนไม่ได้ — ต้องพิมพ์เหตุผล NG เอง')}</div>}
             {!saved && !m.cps.length && <div style={{ fontSize: 12.5, color: 'var(--amber)' }}>{tr('เครื่องนี้ยังไม่มีจุดตรวจ AM — ตั้งที่ PM Setup แท็บฝ่ายผลิต')}</div>}
-            {!saved && m.cps.map((cp, idx) => {
+            {(() => {
+            const frames = framesByJig.key === loadKey ? (framesByJig.map[m.jig.id] || []) : []
+            const showPhoto = !saved && m.cps.length > 0 && frames.length > 0
+            const shimPts = shimByJig.key === loadKey ? (shimByJig.map[m.jig.id] || []) : []
+            const cpById = Object.fromEntries(m.cps.map(c => [c.id, c]))
+            const shimPins = shimPts.map(pt => ({ point: pt, pin: pointPin(pt, cpById), done: String(shimVals[pt.id]?.mm ?? '') !== '' })).filter(x => x.pin)
+            const shimNode = !saved && shimPts.length > 0 && (
+              <ShimRecordSection points={shimPts} shown={shimPts} shimKinds={shimKinds} shimVals={shimVals} setShimVals={setShimVals}
+                canShim={canShim} pinnedIds={new Set(shimPins.map(x => x.point.id))} rowRefs={rowRefs} scrollMarginTop={60} />
+            )
+            const rowsOnly = !saved && m.cps.map((cp, idx) => {
               const r = results[cp.id] ?? {}
               const row = cp.type === 'variable' ? (
                 <VariableRow cp={cp} idx={idx} r={calcRes[cp.id] ?? { v1: '', v2: '', v3: '' }} onChange={v => setResults(p => ({ ...p, [cp.id]: v }))} methodIndex={methodIndex}
@@ -1236,8 +1363,24 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
                   onAccept={() => setResults(p => ({ ...p, [cp.id]: { ...p[cp.id], reasonAccepted: true, reason: carryOf(m, cp.id)?.text || '' } }))}
                   okWarn={okWarnOf(m, cp.id)} />
               )
-              return <div key={cp.id} ref={el => { rowRefs.current[cp.id] = el }} style={{ scrollMarginTop: 60 }}>{row}</div>
-            })}
+              return <div key={cp.id} ref={el => { rowRefs.current[cp.id] = el }} onClickCapture={() => setActiveCp(cp.id)} style={{ scrollMarginTop: 60 }}>{row}</div>
+            })
+            const rows = <>{rowsOnly}{shimNode}</>
+            if (!showPhoto) return rows
+            const mine = activeCp && m.cps.some(c => c.id === activeCp) ? activeCp : null
+            const viewer = (
+              <JigSpinCheck frames={frames} checkpoints={m.cps} results={calcRes} activeCpId={mine}
+                onPinClick={(id) => { setActiveCp(id); jumpTo(id) }} maxH={wide ? 480 : 300} compact={!wide}
+                shimPins={shimPins} onShimPinClick={(id) => rowRefs.current[`shim:${id}`]?.scrollIntoView({ behavior: 'smooth', block: 'center' })} />
+            )
+            /* จอกว้าง = รูปซ้ายค้างไว้ระหว่างเลื่อนรายการของเครื่องนั้น · จอแคบ = รูปอยู่บนหัวรายการ (แบบใบเดี่ยว) */
+            return wide ? (
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 5fr) minmax(0, 6fr)', gap: 14, alignItems: 'start' }}>
+                <div style={{ position: 'sticky', top: 44 }}>{viewer}</div>
+                <div>{rows}</div>
+              </div>
+            ) : <>{viewer}{rows}</>
+            })()}
           </section>
         )
       })}
@@ -2266,7 +2409,7 @@ export default function PMCheckData({ mode = 'pm' }) {
                   canRecord={canRecord} deptWrite={deptWrite} amLineWrite={amLineWriteOf(station.line_name)} userId={userId} userRole={userRole} fullName={fullName}
                   myPosition={myPosition} myEmployeeId={myEmployeeId} isSharedAccount={isSharedAccount}
                   inspectorCode={inspectorCode} setInspectorCode={setInspectorCode} checkedThisShift={checkedThisShift}
-                  ownerTeamOf={ownerTeamOf} isMobileView={isMobileView}
+                  ownerTeamOf={ownerTeamOf} isMobileView={isMobileView} canShim={canShim} shimKinds={shimKinds}
                   onSavedJig={(id, overall) => setCheckedThisShift(prev => ({ ...prev, [id]: overall }))}
                   onQueueMo={(items) => setMoQueue(prev => [...prev, ...items])}
                   onOpenSingle={(id) => { setSingleJigId(id); setParams({ equip: id }); setTab('history') }} />
@@ -2525,67 +2668,12 @@ export default function PMCheckData({ mode = 'pm' }) {
                           </div>
                         )
                       })()}
-                      {shimPoints.length > 0 && (!focusOn || activeShimId) && (() => {
-                        const kindOf = (code) => shimKinds.find(k => k.code === code) || { icon: '🔩', label: code || '—' }
-                        const dueN = shimPoints.filter(pt => pointDueStatus(pt, { currentShot: null }).due).length
-                        return (
-                          <div style={{ marginTop: 12 }}>
-                            <div style={{ padding: '7px 12px', borderRadius: 'var(--r-md)', marginBottom: 8, background: 'var(--blue-dim)', border: '1px solid var(--blue-line)', fontSize: 12.5, fontWeight: 800, color: SHIM_PIN_COLOR }}>
-                              {tr("จุดชิม")} (Shim Record) · {shimPoints.length} {tr('จุด')}{dueN ? <span style={{ color: 'var(--red)' }}> {tr('· ถึงรอบ')} {dueN}</span> : null}
-                              <div style={{ fontSize: 11, fontWeight: 500, color: 'var(--muted)', marginTop: 2 }}>
-                                {tr("วัดค่าชิมรวมตอนนี้แล้วกรอกเป็น mm — บันทึกพร้อมใบตรวจนี้ลงประวัติชิมของจุด (ไม่บังคับ · จุดที่ไม่กรอก = ไม่แตะ")})
-                                {shimPins.length < shimPoints.length && <span> · {shimPoints.length - shimPins.length} {tr('จุดยังไม่ปักบนรูป — ปักที่ /fixture แท็บทะเบียนจุด')}</span>}
-                              </div>
-                            </div>
-                            {!canShim && (
-                              <NoticeBar tone="warn" style={{ marginBottom: 8 }}>
-                                {tr("บัญชีนี้ดูค่าชิมได้แต่บันทึกไม่ได้ — ต้องมีสิทธิ์ fixture_shim:record (admin เปิดให้ที่")} /permissions)
-                              </NoticeBar>
-                            )}
-                            {shimPoints.filter(pt => !focusOn || pt.id === activeShimId).map(pt => {
-                              const st = shimStack(pt)
-                              const due = pointDueStatus(pt, { currentShot: null })
-                              const v = shimVals[pt.id] ?? { mm: '', note: '' }
-                              const mm = v.mm === '' ? null : Number(v.mm)
-                              const act = deriveShimAction(pt.current_shim_mm, mm)
-                              const pinned = shimPins.some(x => x.point.id === pt.id)
-                              const overMax = mm != null && pt.max_shim_mm != null && mm > Number(pt.max_shim_mm)
-                              const k = kindOf(pt.kind_code)
-                              return (
-                                <div key={pt.id} ref={el => { rowRefs.current[`shim:${pt.id}`] = el }}
-                                  style={{ ...S.cpRow(null), borderColor: overMax ? 'var(--red)' : mm != null ? SHIM_PIN_COLOR : 'var(--border)', scrollMarginTop: (stackCompact ? viewerH : 0) + progH + 12 }}>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                    <span style={{ minWidth: 22, height: 18, padding: '0 5px', borderRadius: 'var(--r-md)', background: pinned ? SHIM_PIN_COLOR : 'var(--border2)', color: '#fff', fontSize: 11, fontWeight: 700, display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }} title={pinned ? tr('ปักบนรูปแล้ว') : tr('ยังไม่ปักบนรูป')}>{pt.point_no}</span>
-                                    <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text)' }}>{k.icon} {tr(k.label)}{pt.name ? <span style={{ fontWeight: 500, color: 'var(--muted)' }}> · {pt.name}</span> : null}</span>
-                                    <span style={{ fontSize: 11.5, color: 'var(--muted)', marginLeft: 'auto' }}>
-                                      {tr("ชิมรวม")} <b style={{ color: st.level === 'over' ? 'var(--red)' : st.level === 'warn' ? 'var(--amber)' : 'var(--text)' }}>{st.current ?? '—'}</b> {tr('/ เพดาน')} {pt.max_shim_mm ?? tr("ไม่ตั้ง")} mm
-                                      {due.level !== 'unset' && <span style={{ marginLeft: 8, color: due.due ? 'var(--red)' : due.level === 'soon' ? 'var(--amber)' : 'var(--muted)' }}>· {due.text}</span>}
-                                    </span>
-                                  </div>
-                                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
-                                    <label style={{ fontSize: 12, color: 'var(--text2)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                      {tr('ค่าชิมรวมที่วัดได้')}
-                                      <input type="number" step="0.01" inputMode="decimal" value={v.mm} disabled={!canShim} placeholder="mm"
-                                        onChange={e => setShimVals(prev => ({ ...prev, [pt.id]: { ...v, mm: e.target.value } }))}
-                                        style={{ width: 84, textAlign: 'center', fontFamily: 'monospace' }} />
-                                      <span style={{ fontSize: 11.5, color: 'var(--muted)' }}>mm</span>
-                                    </label>
-                                    <input value={v.note} disabled={!canShim} placeholder={tr('หมายเหตุ (แผ่นที่ซ้อน/เหตุผล)')}
-                                      onChange={e => setShimVals(prev => ({ ...prev, [pt.id]: { ...v, note: e.target.value } }))}
-                                      style={{ flex: '1 1 160px', minWidth: 120 }} />
-                                    {mm != null && (
-                                      <span style={{ fontSize: 11.5, fontWeight: 700, color: overMax ? 'var(--red)' : SHIM_PIN_COLOR }}>
-                                        {act === 'check' ? tr("→ ยืนยันเท่าเดิม") : act === 'add' ? `→ ${tr("เพิ่ม")} +${(mm - Number(pt.current_shim_mm)).toFixed(2)} mm` : `→ ${tr("ลด")} ${(mm - Number(pt.current_shim_mm)).toFixed(2)} mm`}
-                                        {overMax && ' · เกินเพดาน — ควรเปิดใบซ่อมเปลี่ยนชิ้นส่วน'}
-                                      </span>
-                                    )}
-                                  </div>
-                                </div>
-                              )
-                            })}
-                          </div>
-                        )
-                      })()}
+                      {shimPoints.length > 0 && (!focusOn || activeShimId) && (
+                        <ShimRecordSection points={shimPoints} shown={shimPoints.filter(pt => !focusOn || pt.id === activeShimId)}
+                          shimKinds={shimKinds} shimVals={shimVals} setShimVals={setShimVals} canShim={canShim}
+                          pinnedIds={new Set(shimPins.map(x => x.point.id))} rowRefs={rowRefs}
+                          scrollMarginTop={(stackCompact ? viewerH : 0) + progH + 12} />
+                      )}
                       <InspectorCodeField value={inspectorCode} onChange={setInspectorCode} required style={{ marginTop: 8 }} />
                       <textarea value={notes} onChange={e => setNotes(e.target.value)} rows={2} placeholder={tr('หมายเหตุ (ถ้ามี)...')} style={{ marginTop: 8 }} />
                       {/* 🔴 ตรวจไม่ครบ = บันทึกไม่ได้ (19/11 · คำสั่ง user — มาตรฐานเดียวกับใบตรวจ QA)
@@ -2689,7 +2777,7 @@ export default function PMCheckData({ mode = 'pm' }) {
                             </span>
                           )}
                           {insp.approval_status === 'approved' && <span style={{ fontSize: 11, color: 'var(--accent)' }}>{isAmTeam(clDeptById[insp.checklist_id] ?? department) ? tr('✓ อนุมัติแล้ว') : tr('✓ หัวหน้ายืนยันแล้ว')}</span>}
-                          {insp.approval_status === 'rejected' && <span style={{ fontSize: 11, color: '#e05c4a' }}>{tr('✕ ตีกลับ')}</span>}
+                          {insp.approval_status === 'rejected' && <span style={{ fontSize: 11, color: 'var(--red)' }}>{tr('✕ ตีกลับ')}</span>}
                           {insp.approval_status === 'pending' && (() => {
                             // ✍️ B2 — ใบ AM บอกว่ารอใคร (ชั้นถัดไปเหนือคนตรวจ) · ใบช่าง = ป้ายเดิม
                             const am = isAmTeam(clDeptById[insp.checklist_id] ?? department)
@@ -2752,7 +2840,7 @@ export default function PMCheckData({ mode = 'pm' }) {
         <div style={{ position: 'fixed', inset: 0, zIndex: 3100, background: 'var(--scrim)', WebkitBackdropFilter: 'var(--scrim-blur)', backdropFilter: 'var(--scrim-blur)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 16 }}>
           <div style={{ width: '100%', maxWidth: 460, background: 'var(--bg2-surf)', border: '1px solid var(--border2)', borderRadius: 'var(--r-lg)', padding: 20, display: 'flex', flexDirection: 'column', gap: 14 }}>
             <div>
-              <div style={{ fontSize: 16, fontWeight: 800, color: '#e05c4a' }}>{tr('⚠ พบผลตรวจไม่ผ่าน')} {moPrompt.ngTopics.length} {tr('จุด')}</div>
+              <div style={{ fontSize: 16, fontWeight: 800, color: 'var(--red)' }}>{tr('⚠ พบผลตรวจไม่ผ่าน')} {moPrompt.ngTopics.length} {tr('จุด')}</div>
               <div style={{ fontSize: 12.5, color: 'var(--text2)', marginTop: 4 }}>{(moPrompt.jig || selectedJig)?.name}{moQueue.length ? ` · ${tr('ต่อคิวอีก')} ${moQueue.length} ${tr('เครื่อง')}` : ''}</div>
             </div>
             <div style={{ background: 'var(--bg3-surf)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: '9px 12px', fontSize: 12, color: 'var(--text2)', lineHeight: 1.7, maxHeight: 130, overflowY: 'auto' }}>

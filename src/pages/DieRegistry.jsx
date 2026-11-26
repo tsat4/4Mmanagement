@@ -508,7 +508,7 @@ export default function DieRegistry() {
       // คำอธิบายอยู่ชีตท้าย — ชีตข้อมูลต้องเริ่มที่หัวตาราง (ตัวอ่านของผู้ใช้ยึดแถวแรก = หัว)
       XLSX.utils.book_append_sheet(wb, XLSX.utils.aoa_to_sheet([
         ['ทะเบียนแม่พิมพ์', `${tr("ส่งออก")} ${new Date().toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok' })} ${tr("โดย")} ${fullName || '-'}`],
-        ['ขอบเขต', scopeActive ? 'เฉพาะส่วนงานของผู้ส่งออก' : 'ทั้งโรงงาน'],
+        ['ขอบเขต', scopeActive ? 'เฉพาะส่วนงานของผู้ส่งออก' : tr("ทั้งโรงงาน")],
         ['ช่องว่าง', 'ยังไม่ได้กรอก (ไม่ใช่ 0) — ไล่เติมแล้วกรอกกลับที่หน้า /equipment?tab=die'],
         ['เลขแม่พิมพ์', 'D-xxxx ระบบออกให้ ห้ามแก้ · 1 เลข = แม่พิมพ์ 1 ตัว = 1 OP'],
         ['ใช้ร่วมกับชุดอื่น', 'common die — ชุดอื่นยืมแม่พิมพ์ตัวนี้ไปเป็น OP ของชุดนั้น'],
@@ -675,7 +675,7 @@ export default function DieRegistry() {
         {/* 📥 Excel ให้ทีม DIE เอาไปไล่ข้อมูล (05/11 · คำสั่ง user) — ทั้งหมดในขอบเขต ไม่ตามตัวกรอง (worklist ต้องครบ) */}
         <button onClick={exportExcel} disabled={exporting} title={tr('แม่พิมพ์ราย OP + ชุด ทั้งหมดในขอบเขตของคุณ — ช่องว่าง = ยังไม่ได้กรอก')}
           style={{ ...cancelBtnStyle, padding: '0 12px' }}>
-          {exporting ? tr('กำลังสร้างไฟล์…') : 'Export Excel'}
+          {exporting ? tr('กำลังสร้างไฟล์…') : tr('ส่งออก Excel')}
         </button>
         {canEdit && (
           <button onClick={() => setEditSet({ ...emptySet, line_name: filterLine || '' })} style={{ ...saveBtnStyle, padding: '0 14px' }}>
@@ -690,16 +690,16 @@ export default function DieRegistry() {
       {/* สรุป */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginBottom: 12 }}>
         {[
-          { t: 'ชุดแม่พิมพ์', v: stat.sets },
-          { t: 'แม่พิมพ์', v: stat.dies },
-          { t: 'ยังไม่ระบุตัน', v: stat.noTon, warn: stat.noTon > 0 },
+          { t: tr("ชุดแม่พิมพ์"), v: stat.sets },
+          { t: tr("แม่พิมพ์"), v: stat.dies },
+          { t: tr("ยังไม่ระบุตัน"), v: stat.noTon, warn: stat.noTon > 0 },
           /* ⏱️ ความสูงแม่พิมพ์ = ตัวแปรของเวลาเปลี่ยนรุ่น — ยังไม่ครบ = จัดลำดับผลิตให้ประหยัดที่สุดไม่ได้
              (ตั้งใจโชว์จำนวนที่ "ยังไม่รู้" ตรงๆ ไม่ซ่อน ตามกฎความซื่อสัตย์ของจอ) */
-          { t: 'ยังไม่ระบุความสูง', v: stat.noHeight, warn: stat.noHeight > 0,
+          { t: tr("ยังไม่ระบุความสูง"), v: stat.noHeight, warn: stat.noHeight > 0,
             hint: 'ความสูงแม่พิมพ์ (มม.) ใช้คำนวณเวลาเปลี่ยนรุ่นงานปั๊ม — ยังไม่กรอก = ระบบจัดลำดับให้ประหยัดเวลาไม่ได้' },
-          { t: 'ยังไม่ระบุรูปแบบชุด', v: stat.noKind, warn: stat.noKind > 0,
+          { t: tr("ยังไม่ระบุรูปแบบชุด"), v: stat.noKind, warn: stat.noKind > 0,
             hint: 'รูปแบบชุดว่าง = ใบแจ้งซ่อมเติมชนิดอุปกรณ์ให้ไม่ได้ (ถ้าแม่พิมพ์ไม่มีประเภท OP) · กรองด้วยช่อง "รูปแบบชุด" → ยังไม่ระบุ' },
-          { t: 'ชุดที่ข้อมูลไม่ครบ', v: stat.todo, warn: stat.todo > 0 },
+          { t: tr("ชุดที่ข้อมูลไม่ครบ"), v: stat.todo, warn: stat.todo > 0 },
         ].map(c => (
           <div key={c.t} title={tr(c.hint) || undefined} style={{
             background: 'var(--card-surf)', border: `1px solid ${c.warn ? 'var(--amber-line)' : 'var(--border)'}`,

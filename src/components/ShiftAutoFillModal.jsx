@@ -180,7 +180,7 @@ export default function ShiftAutoFillModal({ weekStart, lines = [], deptRows = [
         background: 'var(--bg3)', border: '2px solid rgba(77,159,255,0.5)', borderRadius: 'var(--r-lg)',
         padding: 22, width: 'min(96vw,860px)', maxHeight: '92vh', overflowY: 'auto',
       }}>
-        <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4, color: '#4d9fff' }}>{tr('เติมตารางกะล่วงหน้า')}</div>
+        <div style={{ fontSize: 16, fontWeight: 800, marginBottom: 4, color: 'var(--blue)' }}>{tr('เติมตารางกะล่วงหน้า')}</div>
         <div style={{ fontSize: 12, color: 'var(--muted)', marginBottom: 14, lineHeight: 1.7 }}>
           {tr("ระบบดูรอบสลับที่ตั้งไว้จริงย้อนหลัง แล้วต่อไปข้างหน้าให้")} — <b style={{ color: 'var(--text)' }}>{tr('เริ่มจากสัปดาห์ที่เปิดอยู่ (')}{weekStart})</b>
           {' '}· <b style={{ color: 'var(--text)' }}>{tr('ไม่ทับสัปดาห์ที่ตั้งไว้แล้ว')}</b> · {tr("เป็นค่าตั้งต้นให้ระบบมีอะไรใช้ ถ้าจริงๆ สลับต่างไป แก้ทับได้ตลอด")}
@@ -201,7 +201,7 @@ export default function ShiftAutoFillModal({ weekStart, lines = [], deptRows = [
         {loading && <div style={{ fontSize: 13, color: 'var(--muted)', padding: '16px 0' }}>{tr('กำลังอ่านประวัติตารางกะ...')}</div>}
 
         {err && (
-          <div style={{ padding: '10px 14px', borderRadius: 'var(--r-md)', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.4)', fontSize: 12.5, color: '#ef4444' }}>
+          <div style={{ padding: '10px 14px', borderRadius: 'var(--r-md)', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.4)', fontSize: 12.5, color: 'var(--red)' }}>
             ⚠️ {tr("อ่านประวัติตารางกะไม่ได้")} — {err} · {tr("ยังเติมกะไม่ได้ ลองใหม่อีกครั้ง")}
           </div>
         )}
@@ -233,7 +233,7 @@ export default function ShiftAutoFillModal({ weekStart, lines = [], deptRows = [
                         </td>
                         <td style={{ ...td, color: 'var(--muted)', fontSize: 11.5, whiteSpace: 'nowrap' }}>
                           {tr("สลับทุก")} {r.rot.periodWeeks} {tr('สัปดาห์ · จาก')} {r.rot.weeksSeen} {tr("สัปดาห์ที่ตั้งไว้")}
-                          {r.inheritFrom && <span style={{ color: '#4d9fff' }}> {tr('· ↳ ตามไลน์แม่')} {r.inheritFrom}</span>}
+                          {r.inheritFrom && <span style={{ color: 'var(--blue)' }}> {tr('· ↳ ตามไลน์แม่')} {r.inheritFrom}</span>}
                         </td>
                         {r.weeks.slice(0, 8).map(w => (
                           <td key={w.monday} style={{ ...td, textAlign: 'center' }}>{chip(w.team)}</td>
@@ -253,7 +253,7 @@ export default function ShiftAutoFillModal({ weekStart, lines = [], deptRows = [
             {/* ตรวจ pattern ไม่ได้ = ต้องเห็น ห้ามข้ามเงียบ */}
             {blocked.filter(b => !b.done).length > 0 && (
               <div style={{ padding: '10px 14px', borderRadius: 'var(--r-md)', marginBottom: 14, background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.4)' }}>
-                <div style={{ fontSize: 12.5, fontWeight: 800, color: '#f59e0b', marginBottom: 6 }}>
+                <div style={{ fontSize: 12.5, fontWeight: 800, color: 'var(--amber)', marginBottom: 6 }}>
                   ⚠️ {tr("ต่อรอบให้ไม่ได้")} {blocked.filter(b => !b.done).length} {tr("รายการ — ต้องตั้งเองในตาราง")}
                 </div>
                 <div style={{ display: 'grid', gap: 3 }}>
@@ -267,7 +267,7 @@ export default function ShiftAutoFillModal({ weekStart, lines = [], deptRows = [
             )}
 
             {ready.length === 0 && blocked.every(b => b.done) && blocked.length > 0 && (
-              <div style={{ padding: '10px 14px', borderRadius: 'var(--r-md)', marginBottom: 14, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.4)', fontSize: 12.5, color: '#22c55e' }}>
+              <div style={{ padding: '10px 14px', borderRadius: 'var(--r-md)', marginBottom: 14, background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.4)', fontSize: 12.5, color: 'var(--green)' }}>
                 ✅ {tr("ตั้งกะครบทุกสัปดาห์ในช่วงนี้แล้ว ไม่มีอะไรต้องเติม")}
               </div>
             )}

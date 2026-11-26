@@ -1112,7 +1112,7 @@ export default function OrderTrace() {
                 { l: 'เป้ารวม', v: sum.target.toLocaleString() },
                 { l: 'ผลิตรวม', v: sum.produced.toLocaleString(), c: 'var(--green)', s: sum.target > 0 ? `${Math.round(sum.produced / sum.target * 100)}% ${trI18n("ของเป้า")}` : null },
                 { l: 'NG รวม', v: sum.ng.toLocaleString(), c: sum.ng > 0 ? 'var(--red)' : undefined, s: sum.produced + sum.ng > 0 ? `${(sum.ng / (sum.produced + sum.ng) * 100).toFixed(2)}%` : null },
-                { l: 'ไลน์', v: sum.lines.length, s: sum.lines.slice(0, 2).join(', ') + (sum.lines.length > 2 ? ` +${sum.lines.length - 2}` : '') },
+                { l: trI18n("ไลน์"), v: sum.lines.length, s: sum.lines.slice(0, 2).join(', ') + (sum.lines.length > 2 ? ` +${sum.lines.length - 2}` : '') },
                 { l: 'ชิ้นงาน', v: sum.mats.length, s: sum.mats.slice(0, 2).join(', ') + (sum.mats.length > 2 ? ` +${sum.mats.length - 2}` : '') },
                 { l: 'วันที่ผลิต', v: sum.days.length, s: sum.days.length ? `${fmtDate(sum.days[0])} → ${fmtDate(sum.days[sum.days.length - 1])}` : null },
               ].map(k => (

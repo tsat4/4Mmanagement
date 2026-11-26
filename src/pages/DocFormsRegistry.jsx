@@ -17,6 +17,7 @@ import { DeleteButton } from '../components/IconButton';
 import { tr } from '../utils/i18n';
 import InfoMore from '../components/InfoMore';   // ⓘ คำอธิบายพับ (UI §6.10)
 import { askConfirm } from '../utils/askConfirm';
+import { BOUND_SUBJECTS } from '../utils/wfBound';   // ✍️ เอกสารที่สายเซ็นคุมโดย e-Workflow (25/11)
 
 /* ══════════════════════════════════════════════════════════════
    📄 ทะเบียนเอกสาร & ฟอร์ม (Document Master) — หน้า /doc-forms
@@ -46,6 +47,27 @@ export default function DocFormsRegistry() {
   const [previewScope, setPreviewScope] = useState(''); // ส่วนงานที่จะใช้ตอนกดดูตัวอย่าง
   const emptyRev = { record_date: '', rev: '', issued_date: '', description: '', responsible: '', approved_name: '' };
   const [newRev, setNewRev] = useState(emptyRev);
+
+  /* ✍️ 25/11 (คำสั่ง user "รวมระบบเอกสารกับ e-workflow") — doc_key ไหนมีใบงาน e-Workflow คุมสายเซ็นอยู่
+     ช่องเซ็นบนใบพิมพ์ของเอกสารนั้น = ขั้นในใบงาน (ไม่ใช่ "ช่องลายเซ็น" ในทะเบียนนี้) ⇒ ต้องบอกบนแถว */
+  const [wfByDoc, setWfByDoc] = useState({});
+  const [wfErr, setWfErr] = useState('');
+  useEffect(() => {
+    let alive = true;
+    supabase.from('wf_defs').select('id, name, wf_versions!wf_defs_current_version_fk(flow_schema)').eq('status', 'active')
+      .then(({ data, error }) => {
+        if (!alive) return;
+        if (error) { setWfErr(error.message); return; }
+        const m = {};
+        (data || []).forEach(d => {
+          const f = d.wf_versions?.flow_schema;
+          const dk = BOUND_SUBJECTS.find(b => b.subject === f?.binding?.subject)?.docKey;
+          if (dk) (m[dk] ||= []).push({ id: d.id, name: d.name, steps: (f.steps || []).map(x => x.sig_label || x.label) });
+        });
+        setWfByDoc(m);
+      });
+    return () => { alive = false; };
+  }, []);
 
   const load = async () => {
     setLoading(true);
@@ -213,6 +235,7 @@ export default function DocFormsRegistry() {
           {!canManage && ' · คุณมีสิทธิ์ดูอย่างเดียว'}
         </>} />
 
+      {wfErr && <div style={{ fontSize: 12, color: 'var(--amber)', marginBottom: 8 }}>⚠ {tr('อ่านใบงาน e-Workflow ไม่สำเร็จ — ป้าย "สายเซ็นคุมโดย e-Workflow" อาจไม่ครบ')}: {wfErr}</div>}
       {loading ? <div style={{ textAlign: 'center', padding: 40, color: 'var(--muted)' }}>{tr('กำลังโหลด...')}</div> : (
         <div className="card" style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', minWidth: 860 }}>
@@ -233,6 +256,12 @@ export default function DocFormsRegistry() {
                   <td style={{ fontWeight: 700, whiteSpace: 'nowrap' }}>{r.form_code || <span style={{ color: 'var(--muted)', fontWeight: 400 }}>{tr('— ไม่มีเลข —')}</span>}</td>
                   <td style={{ fontSize: 13 }}>{r.title || '—'}
                     {r.notes && <div style={{ fontSize: 11, color: 'var(--muted)' }}>{r.notes}</div>}
+                    {(wfByDoc[r.doc_key] || []).map(w => (
+                      <div key={w.id} style={{ fontSize: 11, marginTop: 2 }}>
+                        <a href={`/workflow-designer?tab=edit&def=${w.id}`} style={{ color: 'var(--accent)', textDecoration: 'none' }}>✍️ {tr('สายเซ็นคุมโดย e-Workflow')}: {w.name}</a>
+                        <span style={{ color: 'var(--muted)' }}> · {w.steps.join(' → ')}</span>
+                      </div>
+                    ))}
                   </td>
                   <td style={{ textAlign: 'center', fontSize: 12 }}>{r.rev || '—'}</td>
                   <td style={{ textAlign: 'center', fontSize: 12, whiteSpace: 'nowrap' }}>{r.effective_date || '—'}</td>

@@ -26,16 +26,16 @@ import { tr } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 import { MoreMark } from './InfoMore';
 /* 23/09: รับ `scope`/`scopeCols` จาก OrgScopePicker (แทน section+group) — แถวที่หยิบเขียน scope_kind/scope_value ตรง */
-export default function KpiStandardModal({ year, scopeCols = {}, scopeText = '', defs = [], canManage, onClose, onChanged, closedDefs = [], onRestore }) {
+export default function KpiStandardModal({ year, scopeCols = {}, scopeText = '', defs = [], canManage, onClose, onChanged, closedDefs = [], onRestore, initialUnit = '', onLinkUnit = null }) {
   /* หน่วยงานมาตรฐานที่ใบนี้อิงอยู่ — จำไว้ที่ `kpi_definitions.std_unit` ของแถวในใบ
      (ไม่มีตารางตั้งค่าแยก: ใบคือของจริง ทะเบียนเป็นเอกสารอ้างอิง) */
   const savedUnit = useMemo(() => defs.map(d => d.std_unit).find(Boolean) || '', [defs]);
-  const [unit, setUnit] = useState(savedUnit);
+  const [unit, setUnit] = useState(savedUnit || initialUnit);   // 25/11: แถบสถานะส่งหน่วยที่เลือกไว้มาได้ (ใบยังว่าง)
   const [items, setItems] = useState(null);      // null = ยังไม่โหลด
   const [missing, setMissing] = useState(false); // ยังไม่ apply migration
   const [busy, setBusy] = useState('');
 
-  useEffect(() => { setUnit(savedUnit); }, [savedUnit]);
+  useEffect(() => { if (savedUnit) setUnit(savedUnit); }, [savedUnit]);
 
   const load = useCallback(async () => {
     if (!unit) { setItems(null); return; }
@@ -144,8 +144,15 @@ export default function KpiStandardModal({ year, scopeCols = {}, scopeText = '',
               <option key={u.unit} value={u.unit}>{stdUnitLabel(u.unit)}{u.seeded ? '' : tr(" (ยังไม่มีในทะเบียน)")}</option>
             ))}
           </select>
+          {/* 25/11: เปลี่ยนหน่วยที่นี่ = แค่ "ดู" — ใบที่มีแถวแล้วต้องกดบันทึกการผูกจึงจะหายเตือน (เดิมไม่มีทางผูกเลย = user: "ผูกหมดแล้วทำไมยังแจ้งเตือน") */}
+          {unit && unit !== savedUnit && defs.length > 0 && canManage && onLinkUnit && (
+            <button type="button" className="pg-btn sm" onClick={() => onLinkUnit(unit)}
+              title={tr('เขียนหน่วยงานนี้ลงทุกแถวของใบ — แถบสถานะและข้อบังคับจะอ่านจากหน่วยนี้')}>
+              {tr('ใช้หน่วยนี้กับใบนี้')} ({defs.length} {tr('แถว')})
+            </button>
+          )}
           {savedUnit && unit !== savedUnit && (
-            <span style={{ fontSize: 11, color: '#f59e0b' }}>{tr('ใบนี้อิง')} <b>{savedUnit}</b> {tr('อยู่ — เปลี่ยนที่นี่ไม่ย้อนไปแก้แถวเดิม')}</span>
+            <span style={{ fontSize: 11, color: '#f59e0b' }}>{tr('ใบนี้อิง')} <b>{savedUnit}</b> {tr('อยู่ — กำลังดูหน่วยอื่น')}</span>
           )}
         </div>
 
