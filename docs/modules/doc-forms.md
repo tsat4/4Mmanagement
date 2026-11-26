@@ -32,7 +32,8 @@ Legend/ผู้ออกเอกสาร/Revision History **ได้เอ�
 ## ✍️ ช่องเซ็นของเอกสารที่ "สายเซ็นคุมโดย e-Workflow" (2026-11-25 · คำสั่ง user รวมระบบเอกสารกับ e-workflow)
 ทะเบียนนี้ยังเป็นเจ้าของ **เลขฟอร์ม/Rev/วันมีผล/โลโก้/footer** · แต่เอกสารที่ผูกใบงาน e-Workflow (`BOUND_SUBJECTS[].docKey`)
 **ช่องเซ็นบนใบพิมพ์มาจากขั้นของใบงาน** (`step.sig_label`) ไม่ใช่ `sig_blocks` ของแถวนี้ · แถวในจอ /doc-forms ขึ้นป้าย "✍️ สายเซ็นคุมโดย e-Workflow"
-· ตอนนี้: `bbs_observation` (ใบงาน `bbs_monthly`) · ตัวโหลด `src/lib/wfSignoff.js` · 📄 `e-workflow.md` §BBS
+· ตอนนี้: `bbs_observation` (ใบงาน `bbs_monthly` ต.ค.–พ.ย. · `bbs_grid` ธ.ค.→) · ตัวโหลด `src/lib/wfSignoff.js` · 📄 `e-workflow.md` §BBS
+· 🧩 **ใบตรวจแบบตาราง (26/11):** ผูกทะเบียนที่ช่อง `checkgrid.docKey` (เลือกจาก doc_forms ในหน้าออกแบบ) · ใบพิมพ์ `src/lib/gridPrint.js` — **เอกสารแบบตารางใหม่สร้างในหน้าออกแบบได้เลย ไม่ต้องเขียนโค้ดพิมพ์** (แต่ยังต้องมีแถวใน doc_forms ถ้าอยากได้เลขฟอร์ม)
 🔴 **ห้ามสร้างตารางทะเบียนช่องเซ็นแยก** — สายเซ็นอยู่ใน `wf_versions.flow_schema` ที่เดียว
 
 ## 📑 CSV export ก็เป็น "เอกสาร" — เข้าทะเบียนแล้ว (2026-10-06 · คำสั่ง user หลัง QC audit)
@@ -243,3 +244,9 @@ user: *"หน้า QA พวกการตรวจสอบและทุ�
 ใบส่วนใหญ่ของโรงงาน: **เลขฟอร์มซ้ายล่าง · Issue Date ขวาล่าง** (วันที่แบบ `dd/mm/yyyy`) — ค่าวันที่มาจาก `doc_forms.effective_date`
 · ทำแล้ว: **ใบ OJT FM-HRM-004** (`OjtTraining.jsx` คลาส `.docfoot` · ตอนพิมพ์ `position:fixed` ติดล่างทุกหน้า · ทะเบียน `ojt.effective_date = 2014-07-01`)
 · ใบอื่นยังพิมพ์ป้าย "Effective Date" ต่อท้ายเนื้อหาเหมือนเดิม — ยังไม่ได้กวาด (รอ user สั่ง)
+
+## 📈 รอบการออกใบ `paper_basis` / `paper_unit` (2026-11-26 · หน้า `/live-benefits`)
+- 2 ช่องใหม่ (nullable) — "ใบนี้ออกรอบละเท่าไร" ใช้นับกระดาษที่ระบบทดแทน: `shift` ออกทุกกะ · `month` เดือนละใบ (ใบเช็ครายวันที่เติมทั้งเดือน) · `quarter` ทุก 3 เดือน (skill matrix) ·
+  `event` ต่อเรื่อง · `document` เอกสารควบคุม · `report` รายงาน/ส่งออก · `other` ป้าย/แม่แบบ · `null` = ยังไม่จัด (หน้า Live Benefits โชว์ ห้ามซ่อน)
+- แก้ได้ที่ modal แก้ไขของ `/doc-forms` · seed แรกจัดโดยผู้พัฒนาตามรูปฟอร์มพิมพ์ (migration `20261126_live_benefits_main.sql` · เติมเฉพาะแถวที่ว่าง)
+- **ฟอร์มใหม่ที่ลงทะเบียน ให้ตั้ง `paper_basis` ด้วย** (ไม่ตั้ง = ขึ้น "ยังไม่จัดรอบ" ที่ /live-benefits) · 📄 `live-benefits.md`

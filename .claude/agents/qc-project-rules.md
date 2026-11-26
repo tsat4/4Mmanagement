@@ -162,6 +162,8 @@ model: inherit
   · ต้นแบบ/ด่าน: `qa-bins-queue-only` ใน `regressionGuards` · 📄 `docs/modules/production-problem-report-bins.md`
 - [ ] **ตาราง e-Workflow (`wf_*`) เขียนผ่าน RPC เท่านั้น** (13/11) — grep `from('wf_…').insert|update|upsert|delete` ใน `src/` ต้องได้ 0 ·
   ตารางไม่มี policy เขียนโดยตั้งใจ · ด่าน `wf-tables-write-via-rpc` · 📄 `docs/modules/e-workflow.md`
+- [ ] **ใบตรวจแบบตาราง (`wf_grid_*` · 26/11)** — เขียนได้จาก `src/components/WfGridSheet.jsx` ที่เดียว (ผ่าน `ensureSheet`: สิทธิ์ `recordPerm` + `canWriteLine` + ล็อก + stale) ·
+  สัญลักษณ์/หัวข้อต้องอ่านจากช่อง `checkgrid` ของใบงาน ห้าม hardcode · ใบรอบ (`subject_key` ไม่ว่าง) 1 คนเซ็นได้ขั้นเดียว (`wf_open_step`) · ด่าน `wf-checkgrid` + `wf-bound-signoff`
 
 ### หมวด C — Permissions (data-driven)
 

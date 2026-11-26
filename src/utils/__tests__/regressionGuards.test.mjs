@@ -9743,8 +9743,9 @@ test('🛒 pr-queue-needs-po-col — คิวรีลิสต์ MO ต้อ
     '\n\n❌ คิวรีลิสต์ใบขอซื้อไม่ได้ใช้ PR_QUEUE_COLS แล้ว (พิมพ์ชื่อคอลัมน์เอง)\n'
     + '   ผล: ลืม po_no เมื่อไหร่ ถัง "🚚 สั่งแล้ว (มี PO) · รอของเข้า" ว่างตลอดโดยไม่มีใครรู้\n');
   /* ตัวนับต้องมีคีย์ครบทุกค่าที่สูตรคืนได้ — ขาดคีย์ = c[st]++ บน undefined = NaN เงียบๆ */
-  assert.match(page, /const c = \{ need: 0, no_no: 0, open: 0, unknown_po: 0 \}/,
-    '\n\n❌ ตัวนับถัง PR ขาดคีย์ unknown_po — c[st]++ บน undefined = NaN แล้วเลขในวงเล็บเพี้ยนทั้งแถบ\n');
+  assert.match(page, /const c = \{ need: 0, no_no: 0, open: 0, unknown_po: 0, none: 0 \}/,
+    '\n\n❌ ตัวนับถัง PR ขาดคีย์ — c[st]++ บน undefined = NaN แล้วเลขในวงเล็บเพี้ยนทั้งแถบ\n'
+    + '   ต้องครบทุกค่าที่ prQueueStateOf() คืนได้ **รวม `none`** (26/11 · ถัง "ไม่มีงาน PR")\n');
 });
 test('🔧 mo-export-shows-solution — ไฟล์ Excel ของ MO ต้องมี "วิธีการแก้ไข" + สาเหตุ', () => {
   /* why (18/11 · หน้างานแจ้ง): *"ใน Excel ที่ Export ไม่มีวิธีการแก้ไขครับผม
@@ -10675,9 +10676,26 @@ test('🚦 mo-close-gated-by-pr-loop — ปิดใบ MO ต้องถา�
   assert.ok(/moCloseGate\(/.test(page),
     '\n\n❌ หน้า MO ไม่เรียก moCloseGate() แล้ว — ปิดใบได้ทั้งที่ใบขอซื้อยังค้าง\n');
   /* ① + ② ด่านตอนกดบันทึกต้องถามฐานสด ไม่ใช่อ่าน prop ที่ติดมากับ order */
-  assert.ok(/moCloseGate\(_stage,\s*await fetchOpenPrs\(\)\)/.test(page),
+  assert.ok(/moCloseGate\(_stage,\s*await fetchOpenPrs\(\)/.test(page),
     '\n\n❌ ด่านตอนกดเซ็นไม่ได้โหลดใบขอซื้อสดๆ\n'
     + '   ⇒ ตัดสินด้วยค่าค้างในหน้า = บล็อกผิด (ของมาถึงแล้ว) หรือปล่อยผิด (เพิ่ง PR ใบใหม่)\n');
+  /* 🛒 26/11 — ด่าน "เส้นทางบังคับ PR แต่ไม่มีใบเลย" อ่าน `repair_path` ของใบ
+     **ไม่ส่งอาร์กิวเมนต์ที่ 3 = ด่านนั้นเงียบสนิท** (undefined = ไม่รู้เส้นทาง ⇒ ไม่บล็อก) */
+  const calls = [];
+  for (let i = page.indexOf('moCloseGate('); i >= 0; i = page.indexOf('moCloseGate(', i + 1)) {
+    const open = page.indexOf('(', i);
+    let d = 0, j = open;
+    for (; j < page.length; j++) {                      // นับวงเล็บให้ครบ — `[^;]*?` หยุดที่ `)` ตัวแรก
+      if (page[j] === '(') d++;
+      else if (page[j] === ')' && --d === 0) break;
+    }
+    calls.push(page.slice(i, j + 1));
+  }
+  for (const c2 of calls) {
+    assert.ok(/repair_path/.test(c2),
+      `\n\n❌ เรียก moCloseGate() โดยไม่ส่ง repair_path:\n   ${c2}\n`
+      + '   ⇒ ใบที่ "ต้องเปิด PR แต่ไม่มีใบเลย" จะปิดผ่านฉลุยเหมือนเดิม (หลุดมาแล้ว 20 ใบ)\n');
+  }
   assert.ok(!/moCloseGate\([^)]*_prs/.test(page) && !/openPrRows\(o\._prs/.test(page),
     '\n\n❌ ด่านกลับไปอ่าน `order._prs` อีกแล้ว — StepModal ไม่เคยได้รับฟิลด์นี้ (ว่างเสมอ = ด่านตาย)\n');
   /* ห้ามหน้าเขียนเกณฑ์ "ลูป PR จบ" ชุดที่ 2 (= drift)
@@ -12906,6 +12924,24 @@ test('🔗 wf-bound-signoff — เอกสารที่ผูก e-Workflow 
   assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุด\n   ${bad.join('\n   ')}\n`);
 });
 
+test('🧩 wf-checkgrid — ใบตรวจแบบตาราง: จอเดียว อ่านนิยามจากใบงาน · ด่านเขียนครบ (26/11 · คำสั่ง user)', () => {
+  const bad = [];
+  const rd = (f) => stripComments(readFileSync(join(ROOT, f), 'utf8'));
+  const sheet = rd('src/components/WfGridSheet.jsx');
+  /* ทุกขาเขียนผ่าน ensureSheet ⇒ ต้องเช็ค สิทธิ์ (recordPerm) · ชั้น ③ (canWriteLine) · ล็อก (มีคนเซ็น) · ใบที่โชว์ตรงกับที่เลือก */
+  const ens = sheet.slice(sheet.indexOf('const ensureSheet = async'), sheet.indexOf('const notifyAlert'));
+  for (const [re, why] of [[/canRecord/, 'สิทธิ์บันทึก'], [/lineWrite\.ok/, 'ชั้น ③ canWriteLine'], [/if \(lock\)/, 'ล็อกเมื่อเซ็นแล้ว'], [/matches\(/, 'stale guard']])
+    if (!re.test(ens)) bad.push(`WfGridSheet.ensureSheet: ขาดด่าน ${why}`);
+  if (/from '\.\.\/utils\/bbsMarks'/.test(sheet) || /from '\.\.\/utils\/bbsMarks'/.test(rd('src/lib/gridPrint.js')))
+    bad.push('WfGridSheet/gridPrint: ห้าม import สัญลักษณ์ BBS ตายตัว — อ่านจาก checkgrid ของใบงาน');
+  if (/from\('wf_grid_(cells|sheets|row_notes)'\)/.test(rd('src/pages/BbsCheck.jsx'))) bad.push('BbsCheck: ห้ามเขียน wf_grid_* เอง — ใช้ <WfGridSheet>');
+  if (!/isBbsGridMonth\(month\)[\s\S]{0,200}<WfGridSheet defKey=\{BBS_GRID_KEY\}/.test(rd('src/pages/BbsCheck.jsx'))) bad.push('BbsCheck: เดือนตั้งแต่ BBS_GRID_FROM ต้องวาด <WfGridSheet defKey={BBS_GRID_KEY}>');
+  const mig = readFileSync(join(ROOT, 'supabase/migrations/20261126_wf_checkgrid_main.sql'), 'utf8');
+  for (const t of ['trg_wf_grid_sheets_lock', 'trg_wf_grid_cells_lock', 'trg_wf_grid_notes_lock']) if (!mig.includes(`create trigger ${t}`)) bad.push(`migration: ต้องมี ${t}`);
+  if (!/using \(wf_grid_can_write\(def_key\)\)/.test(mig)) bad.push('migration: RLS เขียน wf_grid_sheets ต้องผ่าน wf_grid_can_write');
+  assert.deepEqual(bad, [], `\n\n❌ ${bad.length} จุด\n   ${bad.join('\n   ')}\n`);
+});
+
 test('🏬 store-leg-always-written — ใบขอเติมต้องเขียน "ออกจาก STORE" เสมอ ห้ามมีเงื่อนไข', () => {
   /* 🔴 วัดจริง 25/11: ใบขอเติม 726 ใบ → **174 ใบมีแต่ขาเข้าไลน์ ไม่มีขาออกจาก STORE** (116,878 ชิ้น)
        ต้นเหตุ: โค้ดก่อน 19/11 เขียนว่า
@@ -12973,6 +13009,30 @@ test('🛡️ skill-delete-keeps-scores — ปุ่มลบสกิลห้
     + '(นับก่อน + trigger trg_skill_def_delete_guard ฝั่ง DB · 📄 docs/modules/employee-skills-exp.md §25/11)\n');
   const mig = readFileSync(join(ROOT, 'supabase/migrations/20261125b_skill_def_delete_guard.sql'), 'utf8');
   assert.ok(/before delete on public\.skill_definitions/.test(mig), 'migration ด่านลบสกิลต้องมี trigger before delete');
+});
+
+test('🪪 account-hint-only-identity-codes — บรรทัด "บัญชีที่กำลังใช้" ห้ามขึ้นกับด่านที่เป็นเรื่องของช่อง/ใบ', () => {
+  /* 25/11 · user: "ช่องนี้ตรงที่บอกว่าใช้บัญชีอะไร มันดูตลก … งานที่ไม่เกี่ยวกับบัญชีที่ล็อกอินอยู่
+     แต่มาแจ้งเป็นชื่อเจ้าของบัญชี เค้าจะสับสนมั้ย ว่าช่องนี้เกี่ยวอะไรกับเค้า ทำไมมีชื่อเค้า"
+     เคสจริง: ช่อง "รอ ผจก.ส่วนซ่อมบำรุง รับทราบ" (code `other_team`) ที่ระบุชื่อช่างไว้คนละคน
+     แล้วต่อท้ายด้วยชื่อ "คนที่กำลังดู" ⇒ อ่านแล้วเหมือนช่องนั้นเป็นของเรา
+     ⇒ กฎ: โชว์ได้เฉพาะโค้ดที่ข้อความของมันพูดถึง "บัญชีนี้" อยู่แล้ว (ทะเบียน ACCOUNT_HINT_CODES) */
+  const perm = readFileSync(ROOT + 'src/utils/mtnStepPerm.js', 'utf8');
+  assert.ok(/export const ACCOUNT_HINT_CODES\b/.test(perm) && /export function showsAccountHint\b/.test(perm),
+    '\n\n❌ ไม่มีทะเบียน ACCOUNT_HINT_CODES / showsAccountHint() ใน utils/mtnStepPerm.js\n');
+  assert.ok(!/ACCOUNT_HINT_CODES\s*=\s*Object\.freeze\(\[[^\]]*'other_team'/.test(perm)
+    && !/ACCOUNT_HINT_CODES\s*=\s*Object\.freeze\(\[[^\]]*'wrong_side'/.test(perm),
+    '\n\n❌ ACCOUNT_HINT_CODES มี other_team / wrong_side — 2 โค้ดนี้บอกว่า "ช่องนี้เป็นของฝั่ง/ทีมอื่น"\n'
+    + '   ต่อท้ายด้วยชื่อคนที่กำลังดู = จอโกหกว่าช่องนั้นเกี่ยวกับเขา\n');
+
+  const page = readFileSync(ROOT + 'src/pages/MtnRepair.jsx', 'utf8');
+  const spots = page.match(/\{whoAmILine[^}]*&&[^}]*<span/g) || [];
+  assert.ok(spots.length > 0, '\n\n❌ หา whoAmILine ใน MtnRepair.jsx ไม่เจอ — ด่านนี้ตามของจริงไม่ทันแล้ว\n');
+  for (const s of spots) {
+    assert.ok(/showsAccountHint\(/.test(s),
+      `\n\n❌ MtnRepair.jsx โชว์บรรทัดบัญชีโดยไม่ถาม showsAccountHint():\n   ${s}\n`
+      + '   ⇒ ต้องเป็น {whoAmILine && showsAccountHint(<code ของด่านนั้น>) && <span …>}\n');
+  }
 });
 
 /* ── ⏳ count-blocks-pending-adjust (25/11 · user "ต่างคนต่างนับ ต่างคนต่างอัพยอด จะมั่วไหม") ────
