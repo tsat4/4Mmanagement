@@ -30,14 +30,25 @@ export async function loadDeptFrames(jigIds, department) {
   if (own.error) return { rows: [], error: own.error }
   if (refd.error) return { rows: [], error: refd.error }
   const have = new Set((own.data ?? []).map(r => r.id))
-  const extra = [...new Set((refd.data ?? []).map(r => r.image_id))].filter(id => !have.has(id))
+  /* 🔴 `.filter(Boolean)` ห้ามถอด (26/11 · crashsweep เจอคีย์ซ้ำ 15 ตัวที่ /pm?tab=setup)
+     คิวรีข้างบนกรอง `.not('image_id','is',null)` ไว้ฝั่ง server แล้วก็จริง — แต่ **เอาค่าที่เชื่อว่า
+     ไม่ว่าง ไปยัด `.in()` ต่อโดยไม่ตรวจซ้ำ = เปราะ**: หลุดมาตัวเดียวจะกลายเป็น `.in('id',[null])`
+     ซึ่งแทนที่จะได้ 0 แถว กลับคืน**ทุกแถว** ⇒ `rows` มีของซ้ำ ⇒ ผู้เรียกใช้ `im.id` เป็น React key
+     ⇒ คีย์ซ้ำ = แถวถูกวาดซ้ำ/กลืนแบบไม่การันตี (React ไม่ throw เห็นแค่ใน console) */
+  const extra = [...new Set((refd.data ?? []).map(r => r.image_id))]
+    .filter(Boolean).filter(id => !have.has(id))
   let more = []
   if (extra.length) {
     const r = await supabaseDR.from('jig_images').select(COLS).in('id', extra)
     if (r.error) return { rows: [], error: r.error }
     more = r.data ?? []
   }
-  const rows = [...(own.data ?? []), ...more].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
+  /* 🔴 ยุบ id ซ้ำก่อนคืน — ฟังก์ชันนี้ต่อผล 2 คิวรีของ **ตารางเดียวกัน** (`jig_images`)
+     ซึ่งเป็นคลาสบั๊ก "คีย์ซ้ำในลิสต์" ที่ crashsweep เฝ้าอยู่ (ดู audit/crashsweep.mjs §คีย์ซ้ำ)
+     ⇒ การันตีที่ตัวฟังก์ชันเลย ผู้เรียกจะได้ใช้ `row.id` เป็น key ได้อย่างปลอดภัย */
+  const byId = new Map()
+  for (const r of [...(own.data ?? []), ...more]) if (r && !byId.has(r.id)) byId.set(r.id, r)
+  const rows = [...byId.values()].sort((a, b) => (a.sort ?? 0) - (b.sort ?? 0))
   return { rows, error: null }
 }
 

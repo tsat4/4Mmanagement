@@ -13115,3 +13115,22 @@ test('🛡️ scope-select-merged-group — ไลน์ที่เป็นก
     '\n🎛️ SectionScopeSelect (pickLine) ต้องเช็ค optionOf(\'line_group\', line).merged แล้วชี้แผนก — '
     + 'กลุ่มชื่อซ้ำแผนกถูกซ่อนในลิสต์ (📄 docs/modules/manpower-board.md §25/11)\n');
 });
+
+test('🖼️ jig-frames-no-dup — loadDeptFrames ต้องกันค่าว่างเข้า .in() และยุบ id ซ้ำก่อนคืน', () => {
+  /* 26/11 · crashsweep เจอ "คีย์ซ้ำในลิสต์ 15 ตัว" ที่ /pm?tab=setup ตอนกด "แก้ไข"
+     ต้นเหตุ: `extra` = `refd.data.map(r => r.image_id)` แล้วยัดเข้า `.in('id', extra)` ต่อทันที
+     โดยเชื่อว่าคิวรีก่อนหน้ากรอง `.not('image_id','is',null)` ไว้แล้ว
+     ⇒ หลุดมาตัวเดียว = `.in('id',[null])` ซึ่งคืน **ทุกแถว** แทนที่จะคืน 0 แถว
+     ⇒ `rows` มีของซ้ำ ⇒ ผู้เรียกใช้ `im.id` เป็น React key ⇒ แถวถูกวาดซ้ำ/กลืนแบบไม่การันตี
+     (React เตือนทาง console ไม่ throw ⇒ build/เทส/จอผ่านหมด เห็นจาก crashsweep เท่านั้น)
+     🔴 กฎ: ฟังก์ชันที่ต่อผลหลายคิวรีของ **ตารางเดียวกัน** ต้องยุบ id ซ้ำที่ตัวมันเอง
+        ห้ามฝากให้ผู้เรียกระวัง (ผู้เรียกเห็นแค่ "อาเรย์ของแถว" ไม่รู้ที่มา) */
+  const src = readFileSync(join(ROOT, 'src/utils/jigFrames.js'), 'utf8');
+  assert.match(src, /\.filter\(Boolean\)/,
+    '\n\n❌ jigFrames.js ไม่ได้กรองค่าว่างออกจาก `extra` ก่อนส่งเข้า `.in()`\n'
+    + '   `.in(col, [null])` คืนทุกแถว ไม่ใช่ 0 แถว ⇒ ได้ของซ้ำกลับมาเงียบๆ\n');
+  assert.ok(/new Map\(\)[\s\S]{0,400}byId\.has\(/.test(src),
+    '\n\n❌ jigFrames.js ไม่ได้ยุบ id ซ้ำก่อนคืน `rows`\n'
+    + '   ฟังก์ชันนี้ต่อผล 2 คิวรีของ jig_images ⇒ ต้องการันตี id ไม่ซ้ำที่ตัวเอง\n'
+    + '   (ผู้เรียกใน PMSetup/PMCheckData ใช้ `im.id` เป็น React key)\n');
+});
