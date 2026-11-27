@@ -524,6 +524,8 @@ const TABLE_ROWS = {
   mtn_orders: (r, i) => ({
     ...r,
     mo_no: `MO-2610-${String(i).padStart(3, '0')}`,
+    /* 🔧 27/11 ค่าซ่อม MO บนแกน C: ใบที่รับมอบแล้ว (ho_at ด้านล่าง = วันล่าสุด) บางใบมีค่าใช้จ่าย บางใบยังไม่ลง (null ทั้งคู่ = สาขา nNoCost) · ห้ามถอด */
+    labor_cost: i % 6 === 5 ? 450 : null, parts_cost: i % 6 === 5 ? 1200.5 : null,
     status: ['pending', 'assigned', 'repaired', 'checked', 'handover', 'closed'][i % 6],
     mtn_dept: ['production', 'maintenance', 'jig_maintenance'][i % 3],
     qa_skipped_at: null, purpose: i % 4 === 0 ? 'improve' : 'repair',
@@ -537,7 +539,7 @@ const TABLE_ROWS = {
     repair_done_at: i % 6 >= 2 ? '2026-08-07T08:00:00+07:00' : null,
     check_at:       i % 6 >= 3 && i % 5 !== 0 ? '2026-08-09T08:00:00+07:00' : null,
     qa_at:          i % 6 >= 4 ? '2026-08-10T08:00:00+07:00' : null,
-    ho_at:          i % 6 >= 4 ? '2026-08-11T08:00:00+07:00' : null,
+    ho_at:          i % 6 >= 4 ? `${_recentDay(i % 5)}T08:00:00+07:00` : null,   // 27/11: วันล่าสุด ให้แกน C เห็นค่าซ่อม MO ในช่วงสัปดาห์นี้
     repair_start_at: null, returned_at: null, vendor_sent_at: null,
     /* 🧑 ชื่อผู้แจ้ง — ลิสต์ MO โชว์เป็นคอลัมน์ตั้งแต่ 13/10 ⇒ ต้องมีทั้ง 3 เคสในด่าน
        (วัดจากฐาน 13/10: 720 ใบ · reported_by_name 689 · reporter_prod 692 · ไม่มีทั้งคู่ 25)
@@ -1441,6 +1443,10 @@ const RPC_RESULT = {
   kpi_mtn_rollup: KPI_MTN_ROLL,
   obeya_year_rollup: OBEYA_YEAR,
   obeya_attendance_rollup: OBEYA_ATTEND,
+  obeya_mo_cost_rollup: () => ([
+    { m: '2026-01', line: 'LINE 060', cc: '2140600001', n: 5, n_nocost: 1, labor: 1800, parts: 3250.5 },
+    { m: '2026-02', line: null, cc: null, n: 2, n_nocost: 2, labor: null, parts: null },
+  ]),
   esm_schema_overview: () => ({ at: '2026-09-22T01:00:00Z', tables: SCHEMA_TABLES, fks: SCHEMA_FKS }),
   esm_schema_table: (args) => {
     const name = args?.p_table || 'four_m_logs'

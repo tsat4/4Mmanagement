@@ -173,26 +173,27 @@ export function axisDeliveryYear({ rows = [], year, targetPct = 100 } = {}) {
 /* ════ C ════ มูลค่าความสูญเสีย = เครื่องหยุดนอกแผน × บาท/ชม. + ของเสีย × ต้นทุน/ชิ้น
    ผู้เรียกแปลง rollup.downtime / rollup.defects เป็นบาทมาก่อน (ต้องใช้ rate/cost ที่โหลดจาก DB — ไฟล์นี้ไม่โหลด)
    rows: { m, dt (บาท), ng (บาท) } · missingRate/missingCost = จำนวนไลน์/พาร์ทที่คิดไม่ได้ (ห้ามใส่ 0 แทน) */
-const seedCost = () => ({ dt: 0, ng: 0, ot: 0 });   // 26/11: + ot (ค่า OT ประมาณการ · utils/otCost.js)
-const addCost = (a, r) => { a.dt += n(r.dt); a.ng += n(r.ng); a.ot += n(r.ot); };
+const seedCost = () => ({ dt: 0, ng: 0, ot: 0, mo: 0 });   // 26/11: + ot (ค่า OT · utils/otCost.js) · 27/11: + mo (ค่าซ่อม MO · utils/moCost.js)
+const addCost = (a, r) => { a.dt += n(r.dt); a.ng += n(r.ng); a.ot += n(r.ot); a.mo += n(r.mo); };
 // `sessions` = จำนวนกะในขอบเขต (0 = ไม่มีข้อมูล ⇒ null ห้ามเป็น 0 บาท "ไม่มีความสูญเสีย" · QC 05/10) · null = ไม่รู้ (พฤติกรรมเดิม)
-export function axisCostYear({ rows = [], year, target = null, missingRate = 0, missingCost = 0, otNote = '', sessions = null } = {}) {
+export function axisCostYear({ rows = [], year, target = null, missingRate = 0, missingCost = 0, otNote = '', moNote = '', sessions = null } = {}) {
   const map = byMonth(rows, seedCost, addCost);
-  const { series, total, months } = monthSeries(year, map, seedCost, a => Math.round(a.dt + a.ng + a.ot), 'sum');
-  const sum = total.dt + total.ng + total.ot;
+  const { series, total, months } = monthSeries(year, map, seedCost, a => Math.round(a.dt + a.ng + a.ot + a.mo), 'sum');
+  const sum = total.dt + total.ng + total.ot + total.mo;
   if (sessions === 0 && !(sum > 0)) {
-    return { key: 'C', unit: 'บาท', better: 'down', target, months, value: null, dtBaht: 0, ngBaht: 0, otBaht: 0,
+    return { key: 'C', unit: 'บาท', better: 'down', target, months, value: null, dtBaht: 0, ngBaht: 0, otBaht: 0, moBaht: 0,
       series, summaryKind: 'sum', state: 'none', note: 'ยังไม่มีกะที่ปิดแล้วในปีนี้ — ยังไม่มีข้อมูลให้คิดความสูญเสีย' };
   }
   const notes = [];
   if (otNote) notes.push(otNote);
+  if (moNote) notes.push(moNote);
   if (missingRate) notes.push(`${missingRate} ไลน์ยังไม่ได้ตั้งอัตราค่าแรง/ชม. (cost center)`);
   if (missingCost) notes.push(`${missingCost} พาร์ทยังไม่มีต้นทุน/ชิ้น`);
   return {
     key: 'C', unit: 'บาท', better: 'down', target, months,
     value: sum > 0 ? Math.round(sum) : (notes.length || !months ? null : 0),
-    dtBaht: Math.round(total.dt), ngBaht: Math.round(total.ng), otBaht: Math.round(total.ot),
-    series: series.map(p => (p.acc ? { ...p, dt: Math.round(p.acc.dt), ng: Math.round(p.acc.ng), ot: Math.round(p.acc.ot) } : p)),
+    dtBaht: Math.round(total.dt), ngBaht: Math.round(total.ng), otBaht: Math.round(total.ot), moBaht: Math.round(total.mo),
+    series: series.map(p => (p.acc ? { ...p, dt: Math.round(p.acc.dt), ng: Math.round(p.acc.ng), ot: Math.round(p.acc.ot), mo: Math.round(p.acc.mo) } : p)),
     summaryKind: 'sum',
     state: notes.length ? 'thin' : (sum > 0 ? 'ok' : 'none'),
     note: notes.length ? `คิดได้ไม่ครบ: ${notes.join(' · ')}` : (sum > 0 ? null : 'ยังไม่มีความสูญเสียที่คิดเป็นเงินได้ในปีนี้'),
