@@ -401,6 +401,8 @@ export function orderNavItems(items, group) {
 }
 
 /* 📌 หมวดที่ "แถบแท็บหัวเพจ" (Detail bar) ตรึงติดบนตอนเลื่อนจอ — PageHeader อ่านจากที่นี่ (24/11 คำสั่ง user · จอคอมเท่านั้น) */
+/* 26/11: เลิกใช้เป็นเงื่อนไข — หัวเพจกะทัดรัด/แถบแท็บตรึงบน = ทุกหน้าเดี่ยวบนจอคอม (PageHeader ตัดสินเอง · คำสั่ง user "ให้เหมือนกันทุกหน้า")
+   คงไว้ให้ FULL_STICKY_GROUPS อ้างได้ · ห้ามเอากลับมาเป็นเงื่อนไขรายหมวด */
 export const STICKY_TAB_GROUPS = [LOGISTIC_GROUPS.inbound, 'กิจกรรม'];
 /* 📌 หมวดที่หัวเพจ "ค้างทั้งก้อน" (Header + Detail Bar + Tool Bar) ตอนเลื่อน Card Dashboard (25/11 · คำสั่ง user หมวดกิจกรรม)
    ต่างจาก STICKY_TAB_GROUPS ที่ค้างเฉพาะแถบ (ชื่อหน้าเลื่อนหาย) · ต้องอยู่ใน STICKY_TAB_GROUPS ด้วย (โหมดกะทัดรัด) */
@@ -1306,7 +1308,7 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
                           borderTop: i === 0 ? 'none' : '1px solid var(--border)',
                         }}>{tr(navSubOf(item, group))}</div>
                       )}
-                      {navRow(item, group, onClose)}
+                      {subNav(item, group, onClose) /* 25/11 มือถือ: ข้อย่อย (แท็บของหน้า) เหมือนแผงจอคอม */}
                     </div>
                   ))}
                 </div>

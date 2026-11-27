@@ -1030,6 +1030,10 @@ const TABLE_FIXED = {
     ...[[1, 8.2], [3, 7.8], [4, 9.6], [5, 8.9], [6, 9.3], [7, 8.4], [8, 9.9], [9, 9.2], [10, 8.7]].map(([m, v]) => ({ id: `ke-12-m${m}`, kpi_id: 'kd-12', month: m, value: v })),   // ก.พ. มีแถว ke-12-feb อยู่แล้ว   // เดือนที่ระบบมีค่าจากกะ (sessions 2026-08-04) ⇒ ต้องถูกค่าระบบทับ + จอเขียนบอก
   ],
   /* 🧩 ลำดับแผ่นที่คนจัด (09/10) — PD1 เอา OEE ขึ้นก่อน %RM · คีย์ 'gone' = แผ่นที่ไม่มีแล้ว ต้องถูกข้ามไม่พัง (ห้ามถอด) */
+  /* 💸 ค่าแรงมาตรฐาน OT (26/11) + ปฏิทิน + ใบจอง OT วันหยุด — แกน C ก้อนที่ 3 · ห้ามถอด (ไม่มี = สาขา "ยังไม่ตั้งค่าแรง" เดินตลอด) */
+  obeya_cost_settings: [{ id: 'default', ot_wage_per_hour: 50, updated_by_name: 'ทดสอบ ระบบ' }],
+  company_calendar: [{ work_date: _recentDay(3), day_type: 'ot2', note: 'หยุดชดเชย (mock)' }, { work_date: _recentDay(10), day_type: 'ot15', note: null }],
+  ot_night_bookings: [{ id: 'otb-1', work_date: _recentDay(3), employee_id: 'id-1', shift: 'day', ot_period: 'holiday_day_10h', task_type_id: null }],
   kpi_board_layouts: [
     { id: 'kbl-1', year: 2026, scope_kind: 'section', scope_value: 'PD1', row_keys: ['oee', 'gone', 'rm'], updated_by_name: 'ทดสอบ ระบบ' },
   ],
@@ -1361,8 +1365,9 @@ const OBEYA_YEAR = () => ({
   ],
 })
 const OBEYA_ATTEND = () => ([
-  { m: '2026-01', line: 'ws-1', n: 400, present: 380, ppe_ok: 350, ot: 20 },
-  { m: '2026-02', line: 'ws-1', n: 380, present: 300, ppe_ok: 100, ot: 0 },
+  /* 💸 26/11 ฟิลด์ OT แยกชนิด (ot_day/ot_ext/ot_night/ot_hol15/ot_hol2) — เดือน 1 มีครบ · เดือน 3 เป็นแถว RPC รุ่นเก่า (ไม่มีฟิลด์ใหม่) ⇒ สาขา legacy ต้องถูกรัน ห้ามถอด */
+  { m: '2026-01', line: 'ws-1', n: 400, present: 380, ppe_ok: 350, ot: 20, ot_day: 12, ot_ext: 3, ot_night: 3, ot_hol15: 1, ot_hol2: 1 },
+  { m: '2026-02', line: 'ws-1', n: 380, present: 300, ppe_ok: 100, ot: 0, ot_day: 0, ot_ext: 0, ot_night: 0, ot_hol15: 0, ot_hol2: 0 },
   { m: '2026-03', line: null, n: 50, present: 50, ppe_ok: 50, ot: 5 },
   { m: '2026-04', line: 'ws-ไม่รู้จัก', n: 10, present: null, ppe_ok: null, ot: null },
 ])

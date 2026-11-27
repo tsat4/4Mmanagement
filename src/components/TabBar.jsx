@@ -12,7 +12,7 @@
 
    ใช้:  <TabBar tabs={[{ key, label, badge?, title? }]} value={tab} onChange={setTab} />
          <TabBar size="sm" … />   // แถบในหน้า (13px)
-         <TabBar scroller after={<ปุ่ม/>} … />   // 24/11: จอคอมแถวเดียว ล้นแล้วมีปุ่ม ◀ ▶ เลื่อน · `after` = ของท้ายแถบ (นอกกล่องเลื่อน)
+         <TabBar scroller after={<ปุ่ม/>} … />   // 24/11: แถวเดียว (25/11 ทุกขนาดจอ) ล้นแล้วมีปุ่ม ◀ ▶ เลื่อน · `after` = ของท้ายแถบ (นอกกล่องเลื่อน)
          · ใช้โดย PageHeader โหมดหัวเพจกะทัดรัด (หมวดใน `STICKY_TAB_GROUPS`) · ไม่ส่ง `scroller` = แบบเดิมเป๊ะ */
 import { useEffect, useLayoutEffect, useRef, useState } from 'react';
 import useIsMobile from '../utils/useIsMobile';
@@ -23,7 +23,7 @@ import useScrollEdges from '../utils/useScrollEdges';   // ↔️ 18/11: มื�
 
 const IND_EASE = 'cubic-bezier(.4,1.2,.45,1)';
 
-export default function TabBar({ tabs, value, onChange, size, audit = false, className, style, right, scroller = false, after }) {
+export default function TabBar({ tabs, value, onChange, size, audit = false, className, style, right, scroller = false, after, arrows }) {
   const isMobile = useIsMobile();
   const { tr } = useLang();
   const tabList = (tabs || []).filter(Boolean);
@@ -76,7 +76,7 @@ export default function TabBar({ tabs, value, onChange, size, audit = false, cla
      🔴 โครง DOM ต้องนิ่ง: มือถือ = wrapper เสมอ (ไม่ใช่ "มี wrapper เฉพาะตอนล้น") — ไม่งั้นกล่องเลื่อนถูกสร้างใหม่ตอนสลับ
      แล้ว listener/ResizeObserver ค้างอยู่กับ element เก่าที่ถูกถอด (วัดได้ 0 ⇒ ขอบจางหายทันทีที่เริ่มเลื่อน · เจอจริง 18/11)
      จอคอม overflow visible ⇒ คืน root เดิมเป๊ะ ไม่มี wrapper (desktopdiff 0) */
-  const deskScroll = scroller && !isMobile;
+  const deskScroll = scroller;   // 25/11 (คำสั่ง user "เหมือนจอคอม") — มือถือ/จอแคบก็แถวเดียว + ◀ ▶ แบบเดียวกัน
   const bar = (
     <div ref={scrollRef} className={deskScroll ? 'tabbar-scroller' : (isMobile ? undefined : className)}
       style={{ overflowX: hscroll ? 'auto' : 'visible', paddingTop: 2, paddingBottom: 2, ...(deskScroll ? { flex: 1, minWidth: 0 } : null), ...(isMobile || deskScroll ? null : style) }}>
@@ -114,7 +114,8 @@ export default function TabBar({ tabs, value, onChange, size, audit = false, cla
   /* 🖥️ scroller (จอคอม): แถวเดียวไม่ตัดบรรทัด · ล้นเมื่อไหร่ค่อยมีปุ่ม ◀ ▶ (ปุ่มที่สุดทางแล้ว = จาง กดไม่ได้)
      เส้นใต้ย้ายมาอยู่ที่กรอบนอก ⇒ ยาวเต็มแถวรวมปุ่ม · ป้ายแท็บไม่ถูกบีบ (ห้ามพับเข้า dropdown — กฎเดิม) */
   if (deskScroll) {
-    const over = edges.left || edges.right;
+    // `arrows="always"` (27/11 มาตรฐานกิจกรรม): ปุ่ม ◀ ▶ มีเสมอ — ไม่ล้น = จางกดไม่ได้ (ตำแหน่งไม่กระโดด)
+    const over = arrows === 'always' || edges.left || edges.right;
     const step = (dir) => { const sc = scrollRef.current; if (sc) sc.scrollBy({ left: dir * Math.max(120, sc.clientWidth * 0.7), behavior: prefersReduced() ? 'auto' : 'smooth' }); };
     const arrow = (dir, on) => (
       <button type="button" data-tab-scroll={dir < 0 ? 'left' : 'right'} onClick={() => step(dir)} disabled={!on}
