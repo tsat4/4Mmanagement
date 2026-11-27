@@ -99,7 +99,7 @@ function equipTypeOfMachine(m) {
 
 function newCheckpoint(extra = {}) {
   return {
-    _key: crypto.randomUUID(), name: '', type: 'variable', calc: null, am_check_freq: 'shift',   // _key จุดใหม่ = id ตอน insert (จุดคำนวณอ้างได้ก่อนบันทึก)
+    _key: crypto.randomUUID(), name: '', type: 'variable', calc: null, am_check_freq: 'shift', spc_enabled: true,   // _key จุดใหม่ = id ตอน insert (จุดคำนวณอ้างได้ก่อนบันทึก)
     axis: null, category: null, checking_method: null, unit: '', nominal: '', lsl: '', usl: '', lcl: '', ucl: '',
     // โหมดเกณฑ์ของจุดชนิด "ค่าวัด" — client-only (ขึ้นต้น _ = ไม่ลง DB) เพราะ DB มีแค่ lsl/usl
     // ⚠️ ต้องเป็น state จริง ห้าม derive จาก lsl/usl (ดู mMode ด้านล่าง — เคยทำแล้วกดปุ่มไม่ติด)
@@ -220,6 +220,13 @@ function CheckpointCard({ cp, label, onChange, onDelete, onDuplicate, onCpImage,
           </select>
         </div>
       </div>
+      {/* 📈 SPC อุปกรณ์ (26/11 · utils/equipSpc.js) — ข้อตัวเลขขึ้นกราฟอัตโนมัติ · ปิดได้สำหรับตัวนับ/ข้อที่ไม่ใช่ค่ากระบวนการ */}
+      {(cp.type === 'variable' || cp.type === 'measure') && (
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text2)', marginBottom: 10, cursor: 'pointer' }}>
+          <input type="checkbox" checked={cp.spc_enabled !== false} onChange={e => onChange({ spc_enabled: e.target.checked })} />
+          {tr('ขึ้นกราฟ SPC (ปิดถ้าข้อนี้เป็นตัวนับ เช่น รอบการใช้งาน)')}
+        </label>
+      )}
       {/* 🗓️ รอบตรวจรายหัวข้อ — เฉพาะใบของทีม AM (26/11 · utils/amCheckFreq.js) · ใบ PM ของช่างตามรอบแผนทั้งใบ ไม่มีช่องนี้ */}
       {isAm && (
         <div style={{ marginBottom: 10 }}>
@@ -961,6 +968,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
             axis: c.type === 'variable' ? (c.axis ?? null) : null,
             category: c.category ?? null, checking_method: c.checking_method ?? null, unit: c.unit || null,
             am_check_freq: isAmTeam(department) ? amFreqOf(c) : 'shift',   // 🗓️ ใบ PM ไม่ใช้ — เก็บค่าเดิมทุกกะ
+            spc_enabled: c.spc_enabled !== false,   // 📈 SPC อุปกรณ์ (26/11) — ปิดรายข้อได้ (ตัวนับ/ข้อที่ไม่ใช่ค่ากระบวนการ)
             nominal: c.nominal !== '' && c.nominal != null ? Number(c.nominal) : null,
             lsl: c.lsl !== '' && c.lsl != null ? Number(c.lsl) : null,
             usl: c.usl !== '' && c.usl != null ? Number(c.usl) : null,
@@ -1889,7 +1897,7 @@ export default function PMSetup() {
     if (mode === 'unknown') { toast.error(tr('ตรวจไม่ได้ว่าแผนกอื่นใช้เครื่องนี้อยู่ไหม — ยังไม่ลบ') + (rOther.error ? `: ${rOther.error.message}` : '')); return }
     if (mode === 'view') {
       const names = [...new Set(rOther.data.map(r => r.department))].map(d => pmTeamsSync().find(t => t.key === d)?.label ?? d).join(', ')
-      if (!await askConfirm(`${tr("ถอด")} "${jig.name}" ${tr("ออกจากแผนกนี้")} ?\n\n${tr('เครื่องนี้ยังใช้อยู่ที่')} ${names} — ${tr('ตัวเครื่องและข้อมูลของแผนกนั้นไม่ถูกแตะ')}\n${tr('ที่หายคือจุดตรวจ/แผน/รูปของแผนกนี้เท่านั้น')}${isAmTeam(department) ? '\n' + tr('และปิดรายการ AM รายวันของเครื่องนี้') : ''}`)) return
+      if (!await askConfirm(`${tr("ถอด")} "${jig.name}" ${tr("ออกจากแผนกนี้")} ?\n\n${tr('เครื่องนี้ยังใช้อยู่ที่')} ${names} — ${tr('ตัวเครื่องและข้อมูลของแผนกนั้นไม่ถูกแตะ')}\n${tr('ที่หายคือจุดตรวจ/แผน/รูปของแผนกนี้เท่านั้น')}${isAmTeam(department) ? '\n' + tr('และปิดรายการ AM รายวัน + ถอดออกจากสถานี AM ของเครื่องนี้') : ''}`)) return
       const cl = await findChecklist(jig.id, 'mtn', department)
       if (cl) {
         const r = await supabaseDR.from('checklists').delete().eq('id', cl.id).select('id')
@@ -1908,6 +1916,24 @@ export default function PMSetup() {
         const rt = await supabaseDR.from('pm_daily_line_targets').update({ is_active: false }).eq('jig_id', jig.id).eq('is_active', true).select('id')
         if (rt.error) toast.error(tr('ถอดแล้ว แต่ปิดรายการ AM รายวันไม่สำเร็จ — ไปเอาออกที่จอ AM รายวัน') + `: ${rt.error.message}`)
         else if ((rt.data || []).length) { invalidateTable('pm_daily_line_targets'); amNote = ` · ${tr('ปิดรายการ AM รายวัน')} ${rt.data.length} ${tr('รายการ')}` }
+        /* 🧩 ถอดออกจากสถานี AM ด้วย (user 27/11) — สถานีต้องมี ≥2 อุปกรณ์ (`validateStation` · utils/amStations.js)
+           เหลือไม่ถึง 2 ⇒ ปิดสถานีตามกติกาเดียวกับปุ่ม "ลบสถานี" (ตัวที่เหลือกลับไปตรวจทีละใบ) · ล้ม = บอก ไม่ยกเลิกการถอด */
+        const rm = await supabaseDR.from('am_station_members').select('id, station_id').eq('jig_id', jig.id)
+        if (rm.error) toast.error(tr('ถอดแล้ว แต่อ่านสถานี AM ไม่ได้ — ไปถอดเองที่ตั้งค่าสถานี AM') + `: ${rm.error.message}`)
+        for (const m of rm.data || []) {
+          const d = await supabaseDR.from('am_station_members').delete().eq('id', m.id).select('id')
+          if (d.error || !(d.data || []).length) { toast.error(tr('ถอดออกจากสถานี AM ไม่สำเร็จ — ไปถอดเองที่ตั้งค่าสถานี AM') + (d.error ? `: ${d.error.message}` : '')); continue }
+          amNote += ` · ${tr('ถอดจากสถานี AM')}`
+          const left = await supabaseDR.from('am_station_members').select('id').eq('station_id', m.station_id)
+          if (left.error) { toast.error(tr('ถอดจากสถานีแล้ว แต่นับอุปกรณ์ที่เหลือไม่ได้ — เช็คที่ตั้งค่าสถานี AM') + `: ${left.error.message}`); continue }
+          if ((left.data || []).length < 2) {
+            const ids = (left.data || []).map(r => r.id)
+            const d2 = ids.length ? await supabaseDR.from('am_station_members').delete().in('id', ids).select('id') : { error: null }
+            const off = d2.error ? d2 : await supabaseDR.from('am_stations').update({ is_active: false }).eq('id', m.station_id).select('id')
+            if (off.error || !(off.data || []).length) toast.error(tr('สถานีเหลืออุปกรณ์ไม่ถึง 2 ตัว แต่ปิดสถานีไม่สำเร็จ — ลบสถานีเองที่ตั้งค่าสถานี AM') + (off.error ? `: ${off.error.message}` : ''))
+            else amNote += ` (${tr('สถานีเหลือไม่ถึง 2 ตัว — ปิดสถานี ตัวที่เหลือกลับไปตรวจทีละใบ')})`
+          }
+        }
       }
       invalidateTable('checklists')
       toast.success(tr('ถอดออกจากแผนกนี้แล้ว') + amNote)

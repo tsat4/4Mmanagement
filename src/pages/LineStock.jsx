@@ -1918,7 +1918,7 @@ export default function LineStock() {
   const scope = useMemo(() => ({ role, lineId, sections }), [role, lineId, sections]);
 
   return (
-    <Page>
+    <Page top="flush">
       <PageHeader
         title={tr('Stock Management')} icon="📦"
         sub={tr('ยอดคงเหลือ · ส่งของเข้าไลน์ · รับของเข้าคลัง · แผน-สต๊อก · ตรวจนับเทียบ SAP')}
