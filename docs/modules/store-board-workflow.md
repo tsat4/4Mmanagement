@@ -939,3 +939,12 @@ mockup ที่ user เคาะ: https://claude.ai/artifact/HLTn1Qzx7L3nWt6mq
 - รับของ: ยุบกองแบบจอทำงาน (`groupReceipts`) · ค้างเกินกฎคลัง (`stock_inflow_rules.stale_after_min`) = แดง · `?dest=<คลัง>` = จอเฉพาะคลังนั้น
 - ตัวใหญ่เมื่อเปิดในกรอบจอ TV (`?tvshell=1` หรือบัญชี display) · เสียง = แถบไลน์เรียกของ (`StoreCallSiren variant="inline" size`) แบบไม่มีปุ่มรับทราบ
 - ลิงก์สำหรับทีวี: `/tv?dept=storeq&tvshell=1` (เพิ่ม `&dest=FG WAREHOUSE` ถ้าจอนี้ดูคลังเดียว) · บัญชีที่เปิดต้องมีสิทธิ์หน้า `/tv`
+
+## 🧾 แท็บ "ประวัติเบิก-ส่ง" — ไลน์ขออะไร · สโตร์ส่งอะไร ย้อนหลัง (2026-11-27 · คำสั่ง user)
+- `/line-stock?tab=reqlog` · `components/LineRequestHistory.jsx` · อ่านอย่างเดียวจาก `wip_replenish_requests` (Main)
+- กฎผลของใบ/สรุป = **`utils/requestHistory.js` ที่เดียว** (`reqOutcome` · `summarizeRequests` · `workRangeToTs`) มีเทส
+  · รับครบ = ยอดรับ ≥ ยอดขอ (ส่งเกินตามกล่อง = ครบ) · 🔴 รับแล้วแต่ไม่มียอดรับ = `recv_noqty` นับแยก **ห้ามเดาว่าครบ**
+  · ค้าง = ยังไม่ส่ง + ส่งแล้วรอไลน์รับ · สถานะไม่รู้จัก = `other` ต้องโชว์ · เวลาขอ→รับไม่รู้ = `null` ห้าม 0
+- ช่วงเวลา = วันทำงาน (เริ่ม 08:00) → `requested_at` · เพดาน 93 วัน (เกิน = บอกบนจอ ไม่ดึง)
+- ขอบเขต = `lineScope()` ของกลาง · ซ่อนกี่ใบเขียนบนจอ · ไลน์นอกทะเบียน = ไม่ซ่อน
+- CSV ผ่าน `/doc-forms` คีย์ `csv_line_request_history` (migration `20261127_doc_forms_csv_line_request_history_main.sql` · apply แล้ว)
