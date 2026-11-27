@@ -208,6 +208,8 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
 >   (เคยมี 3 สำเนา ⇒ QA ตัดสินแล้วจอสด/กะที่ปิดแล้วตอบคนละเลข · 2 ด่าน `q-ratio-single-entry`
 >   `produced-total-count-not-qty-ok`) · 🔴 **ฐาน %Q ตัดงานทดลองออก (`qTotalCount`) แต่ "ยอดผลิต"
 >   ที่โชว์นับด้วย (`producedTotalCount`) — คนละคำถาม** · 🔴 **จอหน่วย "คู่/shot" ต้องยุบของเสียก่อนบวก**
+>   · ไม่มีแถว `defect_logs` ในมือ (รายงาน/export) = **`sessionTotalCount(s)`** จาก rollup ที่ stamp ไว้
+>     **ห้ามเอา rollup ไปคิด %Q** · 🔴 **FTT ตัวหาร = ยอดผลิตเหมือนกัน (27/11) แต่ PPM ไม่ใช่** (§7.3 ตัวหาร = ยอดสแกนดี)
 > · 🔴 **คิวรีที่เอาไปคิด %Q ต้องต่อ `${QBIN_EMBED}` ใน select** ไม่ต่อ = `suspectState()` คืน `unknown`
 >   แล้วถอยไปใช้พฤติกรรมเดิม · มีด่าน `oee-suspect-needs-qbin-embed`
 >   🔴 กะที่ QA ยังไม่ตัดสิน = **ค่าชั่วคราว** ต้องคิดใหม่เมื่อตัดสิน (`restampSessionQByDefects()` · ใบเหลืองครอบ = กฎเดียวกัน)
