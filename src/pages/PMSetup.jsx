@@ -1897,7 +1897,7 @@ export default function PMSetup() {
     if (mode === 'unknown') { toast.error(tr('ตรวจไม่ได้ว่าแผนกอื่นใช้เครื่องนี้อยู่ไหม — ยังไม่ลบ') + (rOther.error ? `: ${rOther.error.message}` : '')); return }
     if (mode === 'view') {
       const names = [...new Set(rOther.data.map(r => r.department))].map(d => pmTeamsSync().find(t => t.key === d)?.label ?? d).join(', ')
-      if (!await askConfirm(`${tr("ถอด")} "${jig.name}" ${tr("ออกจากแผนกนี้")} ?\n\n${tr('เครื่องนี้ยังใช้อยู่ที่')} ${names} — ${tr('ตัวเครื่องและข้อมูลของแผนกนั้นไม่ถูกแตะ')}\n${tr('ที่หายคือจุดตรวจ/แผน/รูปของแผนกนี้เท่านั้น')}${isAmTeam(department) ? '\n' + tr('และปิดรายการ AM รายวันของเครื่องนี้') : ''}`)) return
+      if (!await askConfirm(`${tr("ถอด")} "${jig.name}" ${tr("ออกจากแผนกนี้")} ?\n\n${tr('เครื่องนี้ยังใช้อยู่ที่')} ${names} — ${tr('ตัวเครื่องและข้อมูลของแผนกนั้นไม่ถูกแตะ')}\n${tr('ที่หายคือจุดตรวจ/แผน/รูปของแผนกนี้เท่านั้น')}${isAmTeam(department) ? '\n' + tr('และปิดรายการ AM รายวัน + ถอดออกจากสถานี AM ของเครื่องนี้') : ''}`)) return
       const cl = await findChecklist(jig.id, 'mtn', department)
       if (cl) {
         const r = await supabaseDR.from('checklists').delete().eq('id', cl.id).select('id')
@@ -1916,6 +1916,24 @@ export default function PMSetup() {
         const rt = await supabaseDR.from('pm_daily_line_targets').update({ is_active: false }).eq('jig_id', jig.id).eq('is_active', true).select('id')
         if (rt.error) toast.error(tr('ถอดแล้ว แต่ปิดรายการ AM รายวันไม่สำเร็จ — ไปเอาออกที่จอ AM รายวัน') + `: ${rt.error.message}`)
         else if ((rt.data || []).length) { invalidateTable('pm_daily_line_targets'); amNote = ` · ${tr('ปิดรายการ AM รายวัน')} ${rt.data.length} ${tr('รายการ')}` }
+        /* 🧩 ถอดออกจากสถานี AM ด้วย (user 27/11) — สถานีต้องมี ≥2 อุปกรณ์ (`validateStation` · utils/amStations.js)
+           เหลือไม่ถึง 2 ⇒ ปิดสถานีตามกติกาเดียวกับปุ่ม "ลบสถานี" (ตัวที่เหลือกลับไปตรวจทีละใบ) · ล้ม = บอก ไม่ยกเลิกการถอด */
+        const rm = await supabaseDR.from('am_station_members').select('id, station_id').eq('jig_id', jig.id)
+        if (rm.error) toast.error(tr('ถอดแล้ว แต่อ่านสถานี AM ไม่ได้ — ไปถอดเองที่ตั้งค่าสถานี AM') + `: ${rm.error.message}`)
+        for (const m of rm.data || []) {
+          const d = await supabaseDR.from('am_station_members').delete().eq('id', m.id).select('id')
+          if (d.error || !(d.data || []).length) { toast.error(tr('ถอดออกจากสถานี AM ไม่สำเร็จ — ไปถอดเองที่ตั้งค่าสถานี AM') + (d.error ? `: ${d.error.message}` : '')); continue }
+          amNote += ` · ${tr('ถอดจากสถานี AM')}`
+          const left = await supabaseDR.from('am_station_members').select('id').eq('station_id', m.station_id)
+          if (left.error) { toast.error(tr('ถอดจากสถานีแล้ว แต่นับอุปกรณ์ที่เหลือไม่ได้ — เช็คที่ตั้งค่าสถานี AM') + `: ${left.error.message}`); continue }
+          if ((left.data || []).length < 2) {
+            const ids = (left.data || []).map(r => r.id)
+            const d2 = ids.length ? await supabaseDR.from('am_station_members').delete().in('id', ids).select('id') : { error: null }
+            const off = d2.error ? d2 : await supabaseDR.from('am_stations').update({ is_active: false }).eq('id', m.station_id).select('id')
+            if (off.error || !(off.data || []).length) toast.error(tr('สถานีเหลืออุปกรณ์ไม่ถึง 2 ตัว แต่ปิดสถานีไม่สำเร็จ — ลบสถานีเองที่ตั้งค่าสถานี AM') + (off.error ? `: ${off.error.message}` : ''))
+            else amNote += ` (${tr('สถานีเหลือไม่ถึง 2 ตัว — ปิดสถานี ตัวที่เหลือกลับไปตรวจทีละใบ')})`
+          }
+        }
       }
       invalidateTable('checklists')
       toast.success(tr('ถอดออกจากแผนกนี้แล้ว') + amNote)
