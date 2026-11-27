@@ -36,6 +36,7 @@ import { useNavSubItems } from '../utils/navSubItems';
 import { useSearchParams } from 'react-router-dom';
 import WipBetweenSteps from '../components/WipBetweenSteps';
 import SapViewConsumption from '../components/SapViewConsumption';
+import LineRequestHistory from '../components/LineRequestHistory';   // 🧾 ประวัติเบิก-ส่ง (27/11)
 import StockCountSheet from '../components/StockCountSheet';
 import StorageZonePanel from '../components/StorageZonePanel';
 import StorageLocPanel from '../components/StorageLocPanel';
@@ -1939,6 +1940,7 @@ export default function LineStock() {
       {activeTab === 'diff'      && <StockDiscrepancyReport />}
       {activeTab === 'stock'     && <StockTab role={role} scope={scope} />}
       {activeTab === 'count'     && <StockCountSheet role={role} scope={scope} />}
+      {activeTab === 'reqlog'    && <LineRequestHistory />}
       {activeTab === 'wip'       && <WipBetweenSteps />}
       {activeTab === 'sapview'   && <SapViewConsumption />}
       {activeTab === 'sapstock'  && <Suspense fallback={null}><SapStockCompare /></Suspense>}

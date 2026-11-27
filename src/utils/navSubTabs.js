@@ -11,6 +11,7 @@ export const LINE_STOCK_TABS = [
   /* 16/11 (คำสั่ง user) เลิกคำ ขาออก/ขาเข้า — คน W/H อ่านกลับด้าน · key out/in คงเดิม */
   { key:'out',        label: 'ส่งของเข้าไลน์',          perm: 'page:/line-stock' },
   { key:'in',         label: 'รับของเข้าคลัง',          perm: 'page:/line-stock' },
+  { key:'reqlog',     label: 'ประวัติเบิก-ส่ง',          perm: 'page:/line-stock' },   // ไลน์ขออะไร · สโตร์ส่งอะไร ย้อนหลังตามช่วงวัน (27/11)
   { key:'monitoring', label: 'Monitoring แผน-สต๊อก',    perm: 'page:/monitoring' },
   { key:'count',      label: 'ตรวจนับ/เฟิร์มยอด',       perm: 'page:/line-stock' },   // กระทบยอดขาออกที่หลุด + ตรวจนับทั้งคลัง (2026-09-23)
   { key:'sap',        label: 'ค้างตัด SAP',             perm: 'page:/line-stock' },   // ใบที่ส่งถึงไลน์แล้วแต่ตัดจ่ายใน SAP ไม่ได้ (04/11)
