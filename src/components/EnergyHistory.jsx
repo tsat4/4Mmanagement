@@ -15,7 +15,7 @@ import { RATE } from '../utils/refreshRates';
 import useTimeRange from '../utils/useTimeRange';
 import { rangeDays, addDays } from '../utils/timeRange';
 import { fetchAllRows } from '../utils/fetchAllRows';
-import { energyHistory } from '../utils/energy';
+import { energyHistory, minuteKwh, runMinutes } from '../utils/energy';
 import { downloadCsvDoc, csvText } from '../utils/csvDoc';
 import { loadDocForms } from '../utils/docForms';
 import { tooltipProps, axisTick, fmtAxis, CHART_MARGIN, alignedYWidth } from '../utils/chartAxis';
@@ -72,7 +72,7 @@ export default function EnergyHistory() {
     setData(d => (d ? { ...d, loading: true } : d));
     let reg = meters;
     if (!reg) {
-      const m = await supabaseDR.from('energy_live_meters').select('scope_kind, scope_name, panel, parent_name, subtitle, sort_order').eq('is_active', true).order('sort_order').order('scope_name');
+      const m = await supabaseDR.from('energy_live_meters').select('scope_kind, scope_name, panel, parent_name, subtitle, idle_kw, sort_order').eq('is_active', true).order('sort_order').order('scope_name');
       if (id !== req.current) return;
       if (m.error) { setData({ err: 'อ่านทะเบียนตู้ไม่ได้' }); return; }
       reg = m.data || [];
@@ -88,7 +88,7 @@ export default function EnergyHistory() {
     const a = new Date(win ? win.a - 5 * 60000 : Date.parse(`${from}T08:00:00+07:00`)).toISOString();
     const b = new Date(win ? win.b : Date.parse(`${to}T08:00:00+07:00`) + 86400000).toISOString();
     const [rd, dy, ev] = await Promise.all([
-      (minuteWanted || win) ? fetchAllRows(supabaseDR, 'energy_readings', 'scope_name, bucket_at, kw, kw_max, kwh_total, v, a, a_max',
+      (minuteWanted || win) ? fetchAllRows(supabaseDR, 'energy_readings', 'scope_name, bucket_at, kw, kw_max, kwh_total, v, a, a_max, v1, v2, v3',
         q => q.eq('scope_kind', 'zone').in('scope_name', ns).gte('bucket_at', a).lt('bucket_at', b).order('bucket_at').order('scope_name'))
         : Promise.resolve({ data: [], error: null }),
       fetchAllRows(supabaseDR, 'energy_daily', 'scope_name, day, kwh, peak_kw, peak_at',
@@ -124,6 +124,8 @@ export default function EnergyHistory() {
       o[`kwmax:${r.scope_name}`] = r.kw_max == null ? null : Number(r.kw_max);
       o[`v:${r.scope_name}`] = r.v == null ? null : Number(r.v);
       o[`a:${r.scope_name}`] = r.a == null ? null : Number(r.a);
+      // 🔌 แรงดันรายเฟส (ingest v11 · 27/11 — เก็บตั้งแต่วันนั้น ก่อนหน้านี้ = ว่าง)
+      for (const f of ['v1', 'v2', 'v3']) o[`${f}:${r.scope_name}`] = r[f] == null ? null : Number(r[f]);
     }
     return [...by.values()].sort((x, y) => x.t - y.t);
   }, [data]);
@@ -154,6 +156,17 @@ export default function EnergyHistory() {
   };
 
   const single = !compare && data?.names?.length === 1;
+  const meterRow = single ? (meters || []).find(m => m.scope_name === data.names[0]) : null;
+  const idleKw = meterRow?.idle_kw == null || meterRow.idle_kw === '' ? null : Number(meterRow.idle_kw);
+  /* ⏱️ ชั่วโมงทำงาน (27/11) — นาทีที่ kW ≥ เกณฑ์รอ · สูตร runMinutes() · เกณฑ์ว่าง = บอก ห้ามเดา */
+  const runInfo = useMemo(() => (single && data?.readings?.length
+    ? runMinutes(data.readings.filter(r => r.scope_name === data.names[0] && inWin(Date.parse(r.bucket_at))), idleKw) : null), [data, single, idleKw]); // eslint-disable-line react-hooks/exhaustive-deps
+  const hasPhaseV = single && minuteRows.some(r => ['v1', 'v2', 'v3'].some(f => r[`${f}:${data.names[0]}`] != null));
+  /* 📊 kWh ต่อนาที (27/11) — ส่วนต่างเลขมิเตอร์รายนาที (minuteKwh) · ตู้เดียว */
+  const perMin = useMemo(() => (single && data?.readings?.length
+    ? minuteKwh(data.readings).filter(x => x.name === data.names[0] && inWin(x.t)).map(x => ({ t: x.t, kwh: x.kwh })) : []), [data, single]); // eslint-disable-line react-hooks/exhaustive-deps
+  const perMinMax = perMin.reduce((a, b) => (a == null || b.kwh > a.kwh ? b : a), null);
+  const perMinSum = perMin.reduce((s2, x) => s2 + x.kwh, 0);
   const hasKwMax = minuteRows.some(r => Object.keys(r).some(k => k.startsWith('kwmax:') && r[k] != null));
   const yW = alignedYWidth(minuteRows.flatMap(r => Object.entries(r).filter(([k]) => k !== 't').map(([, v]) => v)).filter(v => v != null).map(v => fmtAxis(Math.ceil(v))));
   const lineChart = (prefix, unit, title, color) => (
@@ -175,6 +188,26 @@ export default function EnergyHistory() {
             <Line type="monotone" dataKey={`kwmax:${data.names[0]}`} name={`${tr('สูงสุดในนาที')}:${data.names[0]}`} stroke={color} strokeDasharray="5 4" strokeOpacity={0.7}
               dot={false} strokeWidth={1.2} {...chartAnim()} connectNulls={false} />
           )}
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+
+  /* 🔌 แรงดัน 3 เฟส (ระหว่างสาย L1-L2 / L2-L3 / L3-L1) — สีเดียว แยกด้วยลายเส้น · แกนเดียว */
+  const phaseChart = () => (
+    <div style={card}>
+      <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr('แรงดัน 3 เฟส (V)')}</div>
+      <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 6 }}>{tr('แกน Y:')} V · {tr('1 จุด = 1 นาที · ชี้เพื่อดูค่า')} · {tr('เส้นทึบ L1-L2 · ประยาว L2-L3 · ประสั้น L3-L1')}</div>
+      <ResponsiveContainer width="100%" height={220}>
+        <LineChart data={minuteRows} margin={CHART_MARGIN} syncId="energy-history">
+          <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+          <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={tLabel} tick={axisTick()} minTickGap={60} />
+          <YAxis width={yW} tick={axisTick()} tickFormatter={fmtAxis} domain={['auto', 'auto']} />
+          <Tooltip {...tooltipProps()} labelFormatter={tLabel} formatter={(v, k) => [`${fmt(v, 1)} V`, k]} />
+          <Legend wrapperStyle={{ fontSize: 12 }} />
+          {[['v1', 'L1-L2', undefined], ['v2', 'L2-L3', '6 4'], ['v3', 'L3-L1', '2 3']].map(([f, lbl, dash]) => (
+            <Line key={f} type="monotone" dataKey={`${f}:${data.names[0]}`} name={lbl} stroke={INFO} strokeDasharray={dash} dot={false} strokeWidth={1.6} {...chartAnim()} connectNulls={false} />
+          ))}
         </LineChart>
       </ResponsiveContainer>
     </div>
@@ -216,6 +249,13 @@ export default function EnergyHistory() {
           <Tile color={h.kpi.coverage == null ? IDLE : h.kpi.coverage >= 0.95 ? GOOD : WARN} label={tr('ความครบของข้อมูล')}
             value={h.kpi.coverage == null ? '—' : `${fmt(h.kpi.coverage * 100, 0)}`} unit={h.kpi.coverage == null ? '' : '%'}
             sub={tr('นาทีที่มีค่า ÷ นาทีที่ควรมี (ตัดที่ตอนนี้)')} />
+          {single && (
+            <Tile color={runInfo?.pct == null ? IDLE : GOOD} label={tr('ชั่วโมงทำงาน')}
+              value={runInfo?.pct == null ? '—' : fmt(runInfo.runMin / 60, 1)} unit={runInfo?.pct == null ? '' : `${tr('ชม.')} (${fmt(runInfo.pct * 100, 0)}%)`}
+              sub={!h.minuteOk ? tr('ต้องใช้ข้อมูลรายนาที (7 วันล่าสุด ไม่เกิน 3 วัน)')
+                : idleKw == null ? <span style={{ color: WARN }}>{tr('ยังไม่ได้ตั้งเกณฑ์รอ (แท็บตั้งค่าตู้)')}</span>
+                : `${tr('นาทีที่ kW ≥')} ${fmt(idleKw, 1)} kW ÷ ${runInfo?.dataMin ?? 0} ${tr('นาทีที่มีค่า')}`} />
+          )}
         </div>
 
         {!h.minuteOk && (
@@ -225,8 +265,28 @@ export default function EnergyHistory() {
           </NoticeBar>
         )}
         {h.minuteOk && lineChart('kw', 'kW', single && hasKwMax ? tr('กำลังไฟ (kW) — เส้นทึบ = ค่าที่มิเตอร์ส่งมาในนาที · เส้นประ = สูงสุดในนาที') : tr('กำลังไฟ (kW)'), GOOD)}
-        {h.minuteOk && single && lineChart('v', 'V', tr('แรงดัน (V) — เฉลี่ย 3 เฟส'), INFO)}
+        {h.minuteOk && single && (hasPhaseV ? phaseChart() : <>
+          {lineChart('v', 'V', tr('แรงดัน (V) — เฉลี่ย 3 เฟส'), INFO)}
+          <div style={{ fontSize: 11.5, color: 'var(--muted)', marginTop: -6 }}>{tr('ยังไม่มีแรงดันรายเฟสในช่วงนี้ — เริ่มเก็บประวัติรายเฟสตั้งแต่ 27/11/2026 (ตู้ที่ส่ง v1-v3 มา)')}</div>
+        </>)}
         {h.minuteOk && single && lineChart('a', 'A', tr('กระแส (A)'), ACC)}
+        {h.minuteOk && single && perMin.length > 0 && (
+          <div style={card}>
+            <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr('หน่วยไฟต่อนาที (kWh)')}</div>
+            <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 6 }}>
+              {tr('แกน Y:')} kWh · {tr('1 แท่ง = 1 นาที (ส่วนต่างเลขมิเตอร์ · ถอยหลัง/ขาดช่วง = ไม่นับ)')} · {tr('รวม')} {fmt(perMinSum, 2)} kWh · {tr('เฉลี่ย')} {fmt(perMinSum / perMin.length, 3)} · {tr('สูงสุด')} {fmt(perMinMax?.kwh, 3)} ({tLabel(perMinMax?.t)})
+            </div>
+            <ResponsiveContainer width="100%" height={200}>
+              <BarChart data={perMin} margin={CHART_MARGIN} barCategoryGap={0}>
+                <CartesianGrid stroke="var(--border)" strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="t" type="number" scale="time" domain={['dataMin', 'dataMax']} tickFormatter={tLabel} tick={axisTick()} minTickGap={60} />
+                <YAxis width="auto" tick={axisTick()} tickFormatter={fmtAxis} />
+                <Tooltip {...tooltipProps()} labelFormatter={tLabel} formatter={(v) => [`${fmt(v, 3)} kWh`, tr('หน่วยไฟในนาที')]} />
+                <Bar dataKey="kwh" fill="var(--accent2)" {...chartAnim()} />
+              </BarChart>
+            </ResponsiveContainer>
+          </div>
+        )}
 
         <div style={card}>
           <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr('หน่วยไฟที่ใช้ (kWh)')}</div>

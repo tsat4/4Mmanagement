@@ -8,7 +8,8 @@
          → Main /auth/v1/user 200 → rpc has_perm('energy:record') = true (คีย์เดียวกับปุ่มบนจอ)
    body: { action, ... }
      save   { create?, scope_kind, scope_name, display_name?, panel, parent_name?, subtitle?,
-              limit_kw?, limit_a?, gauge_max_kw?, sort_order?, is_active? }
+              limit_kw?, limit_a?, gauge_max_kw?, idle_kw?, sort_order?, is_active? }
+            idle_kw (27/11) = เกณฑ์ "รอ" — kW ต่ำกว่านี้ = รอ · ว่าง = ยังไม่ตั้ง (จอไม่ตัดสิน ทำงาน/รอ) · ไม่ส่งคีย์ = ไม่แตะ
             create = เพิ่มตู้ใหม่ — scope ต้องมีใน energy_meter_topics (มีข้อมูลเข้าจริง) และยังไม่อยู่บนบอร์ด
             🔴 scope_name = คีย์ข้อมูล/ประวัติ ห้ามเปลี่ยน — ชื่อบนจอแก้ที่ display_name
             🔴 parent_name ต้องเป็นตู้ที่อยู่บนบอร์ดแล้ว · ห้ามชี้ตัวเอง · ห้ามวน
@@ -19,7 +20,7 @@
 import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const MAIN_URL = 'https://ewhdfqwfwofivojtsizn.supabase.co';
-const COLS = 'scope_kind, scope_name, display_name, panel, parent_name, subtitle, limit_kw, limit_a, gauge_max_kw, sort_order, is_active, updated_at, updated_by';
+const COLS = 'scope_kind, scope_name, display_name, panel, parent_name, subtitle, limit_kw, limit_a, gauge_max_kw, idle_kw, sort_order, is_active, updated_at, updated_by';
 const CORS = {
   'access-control-allow-origin': '*',
   'access-control-allow-methods': 'POST, OPTIONS',
@@ -134,6 +135,11 @@ Deno.serve(async (req) => {
     const v = num(body?.[k]);
     if (v === 'bad') return json({ error: `${k} ต้องเป็นตัวเลขไม่ติดลบ` }, 400);
     nums[k] = v;
+  }
+  if ('idle_kw' in (body || {})) {   // ไม่ส่งคีย์ = ไม่แตะค่าเดิม (ตัวเรียกรุ่นเก่าไม่ล้างเกณฑ์)
+    const v = num(body.idle_kw);
+    if (v === 'bad') return json({ error: 'เกณฑ์รอ (idle_kw) ต้องเป็นตัวเลขไม่ติดลบ' }, 400);
+    nums.idle_kw = v;
   }
   const so = Number(body?.sort_order ?? 0);
   const row = {
