@@ -1325,4 +1325,4 @@ body.esm-tv-shell .tv-hide { display: none !important; }
 .tabbar-scroller::-webkit-scrollbar { display: none; }
 
 /* 📐 <Page top="flush"> (27/11 · มาตรฐานหน้ากิจกรรม) — หัวเพจตรงแถวบนสุดของ Main bar · จอคอมเท่านั้น */
-@media (min-width: 769px) { .page-content.page-flush-top { padding-top: 10px; } }
+@media (min-width: 769px) { .page-content.page-flush-top { padding-top: 10px; } .page-content .page-content.page-flush-top { padding-top: 0; } }   /* หน้าที่ถูกฝังใน hub (Page ซ้อน) = ไม่มีขอบเหมือนเดิม */

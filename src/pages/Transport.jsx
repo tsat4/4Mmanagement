@@ -180,7 +180,7 @@ export default function Transport() {
   };
 
   return (
-    <Page>
+    <Page top="flush">
       <PageHeader
         title={tr('มอบหมายขนส่ง (Transport)')} icon="🚚"
         sub={tr('มอบหมายคนขับ/ผู้ขน (carrier) ให้รอบส่งภายในของวันนี้ · ยึดรอบส่งที่ตั้งไว้แล้ว (📦 Line Stock → รอบจัดส่ง) · เฟส 1')}
@@ -191,6 +191,7 @@ export default function Transport() {
           { key: 'carriers', label: `👷 ${tr(TT.carriers)} (${carriers.filter(c => c.is_active).length})` },
         ]}
         tab={tab} onTab={setTab}
+        tools={[{ key: 'refresh', label: 'รีเฟรช', onClick: () => load() }]}   /* Tool Bar มาตรฐาน (27/11) */
       />
 
       <ReadOnlyNote show={!canManage} role={role} what={tr("มอบหมายคนขับ/แก้ทะเบียนยานพาหนะ")}
