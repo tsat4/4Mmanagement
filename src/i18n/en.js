@@ -18794,6 +18794,11 @@ const EN = {
   "ช่วง Baseline = เวลาพักที่เครื่องควรเบา (เวลาไทย 24 ชม.) · ว่างทั้งคู่ = ไม่โชว์ Baseline": "Baseline window = break time when load should be low (Thai time, 24 h) · both blank = no baseline",
   "เริ่ม Baseline": "Baseline start",
   "จบ Baseline": "Baseline end",
+  /* ── Obeya แกน C ค่าซ่อม MO (27/11) ── */
+  'เครื่องหยุดนอกแผน + ของเสีย + ค่า OT + ค่าซ่อม MO': 'Unplanned downtime + defects + OT cost + MO repair cost',
+  'ค่าซ่อม MO = ค่าแรง + อะไหล่ที่ช่างกรอกในใบ นับวันที่ผู้แจ้งรับมอบ': 'MO repair cost = labour + parts entered by the technician, counted on the handover date',
+  'ซ่อม MO': 'MO repair',
+  'ค่าซ่อม MO': 'MO repair cost',
   "ทำงาน": "Running",
   "ตั้งเกณฑ์แล้ว": "threshold set",
   "ยังไม่ได้ตั้งเกณฑ์รอ — แท็บตั้งค่าตู้": "Idle threshold not set — Panel settings tab",
