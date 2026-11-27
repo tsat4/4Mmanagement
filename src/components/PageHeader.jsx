@@ -3,7 +3,8 @@ import { MoreMark } from './InfoMore';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { NAV_ITEMS, STICKY_TAB_GROUPS, FULL_STICKY_GROUPS, inNavGroup } from '../App';
 import { useNavSubItemsStore } from '../utils/navSubItems';   // 🗂️ Detail Bar = รายการที่หน้าประกาศตอนรัน (พื้นที่ SAP)
-import { useMergeParams } from '../utils/useTabParam';   // 🗂️ 24/11 หน้าที่แท็บย้ายไปเป็นข้อย่อยในแผงเมนู
+import { useMergeParams } from '../utils/useTabParam';
+import { NAV_SUB_TABS } from '../utils/navSubTabs';   // 🗂️ 24/11 หน้าที่แท็บย้ายไปเป็นข้อย่อยในแผงเมนู
 import useIsMobile from '../utils/useIsMobile';
 import { HubContext } from './Page';
 import MobileFilterFold, { splitFilterChildren } from './MobileFilterFold';
@@ -157,35 +158,47 @@ function HeaderSearch({ rootRef, tabKey }) {
   );
 }
 
-/* ══ 🧰 Tool Bar — ค้นหา · เพิ่ม · แก้ไข · ลบ (2026-11-25 · คำสั่ง user "ต้องอยู่ตำแหน่งดังภาพตลอด") ══ */
-const TOOL_ORDER = ['search', 'add', 'edit', 'delete'];
-const TOOL_TONE = { search: null, add: 'var(--green)', edit: 'var(--amber)', delete: 'var(--red)' };
-const TOOL_DIM  = { search: null, add: 'var(--green-dim)', edit: 'var(--amber-dim)', delete: 'var(--red-dim)' };
-const TOOL_GLYPH = { search: '🔍', add: '➕', edit: '📝', delete: '🗑️' };
+/* ══ 🧰 Tool Bar — (2026-11-25 · คำสั่ง user "ต้องอยู่ตำแหน่งดังภาพตลอด") ══
+   27/11 มาตรฐาน 7 ปุ่ม: รีเฟรช · ค้นหา · Export · Import · เพิ่ม · แก้ไข · ลบ — `layout="std"` วาดครบ 7 ปุ่มเสมอ
+   ปุ่มที่หน้าไม่ส่งมา = จางกดไม่ได้ (ตำแหน่งปุ่มไม่ขยับระหว่างหน้า/แท็บ) */
+const TOOL_ORDER = ['refresh', 'search', 'export', 'import', 'add', 'edit', 'delete'];
+const TOOL_LABEL = { refresh: 'รีเฟรช', search: 'ค้นหา', export: 'Export', import: 'Import', add: 'เพิ่ม', edit: 'แก้ไข', delete: 'ลบ' };
+const TOOL_TONE = { add: 'var(--green)', edit: 'var(--amber)', delete: 'var(--red)' };
+const TOOL_DIM  = { add: 'var(--green-dim)', edit: 'var(--amber-dim)', delete: 'var(--red-dim)' };
+const TOOL_GLYPH = { refresh: '🔄', search: '🔍', export: '📤', import: '📥', add: '➕', edit: '📝', delete: '🗑️' };
 /* 📱 มือถือ (25/11 "เหมือนจอคอม"): ปุ่มเหลือไอคอน (ป้ายเต็มอยู่ใน title/aria-label) — ไม่งั้น 4 ปุ่มกินทั้งแถวจน Detail Bar เหลือ 0 */
-function ToolBar({ tools, iconOnly = false }) {
+function ToolBar({ tools, iconOnly = false, full = false }) {
   const { tr } = useLang();
-  const list = [...tools].sort((a, b) => TOOL_ORDER.indexOf(a.key) - TOOL_ORDER.indexOf(b.key));
+  const byKey = Object.fromEntries(tools.map(t => [t.key, t]));
+  const list = full
+    ? TOOL_ORDER.map(k => byKey[k] || { key: k, label: TOOL_LABEL[k], disabled: true, why: 'หน้านี้ไม่ใช้ปุ่มนี้' })
+    : [...tools].sort((a, b) => TOOL_ORDER.indexOf(a.key) - TOOL_ORDER.indexOf(b.key));
   return (
     <span data-ph="toolbar" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 8 }}>
       {list.map(t => (
-        <button key={t.key} type="button" data-tool={t.key} onClick={t.onClick} disabled={!!t.disabled} title={tr(t.label)} aria-label={tr(t.label)}
+        <button key={t.key} type="button" data-tool={t.key} onClick={t.disabled ? undefined : t.onClick} disabled={!!t.disabled}
+          title={tr(t.label || TOOL_LABEL[t.key]) + (t.disabled && t.why ? ` — ${tr(t.why)}` : '')} aria-label={tr(t.label || TOOL_LABEL[t.key])}
           style={{ height: 30, padding: iconOnly ? '0 8px' : '0 12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--r-md)', fontSize: 13, fontWeight: 600, cursor: t.disabled ? 'default' : 'pointer',
             border: `1px solid ${TOOL_TONE[t.key] || 'var(--border2)'}`, background: TOOL_DIM[t.key] || 'var(--card)',
-            color: TOOL_TONE[t.key] || 'var(--text)', opacity: t.disabled ? 0.5 : 1, whiteSpace: 'nowrap' }}>
-          {iconOnly ? <Icon glyph={TOOL_GLYPH[t.key]} size={16} /> : tr(t.label)}</button>
+            color: TOOL_TONE[t.key] || 'var(--text)', opacity: t.disabled ? 0.4 : 1, whiteSpace: 'nowrap' }}>
+          {iconOnly ? <Icon glyph={TOOL_GLYPH[t.key]} size={16} /> : tr(t.label || TOOL_LABEL[t.key])}</button>
       ))}
     </span>
   );
 }
 
 export default function PageHeader({
-  title, icon, sub, actions, tabs, tab, onTab, breadcrumb = true, filters, children, tools,
+  title, icon, sub, actions, tabs, tab, onTab, breadcrumb = true, filters, children, tools, layout,
 }) {
+  /* 📐 `layout="std"` (27/11 · ต้นแบบมาตรฐานบนหน้ากิจกรรม — รอ user เคาะรูปก่อนกวาดทั้งระบบ · UI §0.1)
+     Header ชิดบน (คู่กับ <Page top="flush">) → Detail Bar แถวเดียว ◀ ▶ มีเสมอ + Tool Bar 7 ปุ่มขวา → การ์ด
+     · แท็บของหน้า (Dashboard/Edit Data/Setting) เปลี่ยนที่ Sub bar ⇒ ไม่วาดแถบแท็บในหน้า (ต้องมีใน `NAV_SUB_TABS` ไม่งั้นวาดตามเดิม) */
+  const std = layout === 'std';
   const isMobile = useIsMobile();
   const { tr } = useLang();
   const inHub = useContext(HubContext);   // หน้าลูกใน hub → ไม่วาดชื่อหน้า/breadcrumb ซ้ำ (Page.jsx)
   const { pathname, search } = useLocation();
+  const tabsViaMenu = std && !!NAV_SUB_TABS[pathname];   // std: แท็บเปลี่ยนที่ Sub bar (มีทางเข้าแน่นอน)
   const navigate = useNavigate();
   const navItem = NAV_ITEMS.find(n => n.to === pathname);
   const rawTabs = (tabs || []).filter(Boolean);
@@ -236,7 +249,7 @@ export default function PageHeader({
   /* 🧰 Tool Bar (25/11) — ปุ่มคำสั่งชุดมาตรฐาน ตำแหน่งตายตัวขวาสุดของแถว Detail Bar (ลำดับ ค้นหา · เพิ่ม · แก้ไข · ลบ)
      · หน้าส่ง `tools=[{ key:'search'|'add'|'edit'|'delete', label, onClick, disabled }]` · ไม่ส่ง = ไม่มี (ปุ่ม 🔍 แบบเดิม)
      · ลำดับเรียงตาม `TOOL_ORDER` เสมอ ไม่ว่าหน้าส่งมาลำดับไหน (ผู้ใช้จำตำแหน่งได้ — คำสั่ง user) */
-  const toolBar = compactSticky && tools && tools.length ? <ToolBar tools={tools} iconOnly={isMobile} /> : null;
+  const toolBar = compactSticky && ((tools && tools.length) || std) ? <ToolBar tools={tools || []} iconOnly={isMobile || std} full={std} /> : null;   // std (27/11 คำสั่ง user): ไอคอนทุกขนาดจอ · ชี้ค้าง = ชื่อปุ่ม (title)
   const rootRef = useRef(null);
   const [stickTop, setStickTop] = useState(0);
   useLayoutEffect(() => {
@@ -374,11 +387,16 @@ export default function PageHeader({
             tabs={[...(detail.all ? [{ key: '__all', label: tr('ทั้งหมด') }] : []), ...detailItems.map(it => ({ key: String(it.key), label: it.label, title: it.label }))]}
             value={detailCur || (detail.all ? '__all' : String(detailItems[0].key))}
             onChange={(k) => setUrl({ [detail.query]: k === '__all' ? null : k }, { replace: true })}
-            after={toolBar || <HeaderSearch rootRef={rootRef} tabKey={String(tab ?? '')} />} />
+            arrows={std ? 'always' : undefined}
+            after={(std && isMobile) ? undefined : (toolBar || <HeaderSearch rootRef={rootRef} tabKey={String(tab ?? '')} />)} />
+          {/* 📱 std บนมือถือ: Tool Bar 7 ปุ่มไม่พอที่ในแถวเดียวกับ Detail Bar (Detail Bar เหลือกว้าง 0) ⇒ ลงแถวถัดไปชิดขวา ลำดับปุ่มเดิม */}
+          {std && isMobile && toolBar && (
+            <div data-ph="toolbar-row" style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 6 }}>{toolBar}</div>
+          )}
         </div>
       )}
 
-      {!!tabList.length && renderTabs()}
+      {!!tabList.length && !tabsViaMenu && renderTabs()}
 
       {/* ── ลำดับแนวตั้งตายตัวทุกหน้า: breadcrumb → ชื่อหน้า|ปุ่มคำสั่ง → แท็บ → แถบกรอง → เนื้อหา ──
           (user 24/09: "ลำดับยังโดดไปมา เดี๋ยวแท็บมาก่อนช่องค้นหา บางหน้าค้นหาอยู่บนสุดก่อนแท็บ") */}

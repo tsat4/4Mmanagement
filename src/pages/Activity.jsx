@@ -26,16 +26,21 @@ export default function Activity() {
   const tabMeta = ACTIVITY_TABS.find(t => t.key === tab) || ACTIVITY_TABS[0];
 
   const notYet = (what) => () => toast.info(`${tr(what)} — ${tr('ยังไม่เชื่อมฐานข้อมูล (หน้ากิจกรรมยังเป็นโครง)')}`);
-  const tools = [
-    { key: 'search', label: 'ค้นหา', onClick: notYet('ค้นหา') },
-    { key: 'add',    label: tr("เพิ่ม"),  onClick: notYet(tr("เพิ่ม")) },
-    { key: 'edit',   label: tr("แก้ไข"), onClick: notYet(tr("แก้ไข")) },
-    { key: 'delete', label: tr("ลบ"),    onClick: notYet(tr("ลบ")) },
-  ];
+  /* 🧰 Tool Bar ตามหน้าที่ของแต่ละส่วน (27/11 · คำสั่ง user):
+     Dashboard = แสดงผลอย่างเดียว ⇒ รีเฟรช · ค้นหา · Export (ปุ่มจัดการข้อมูลจาง)
+     Edit Data = transaction (เบิก/จ่าย/กรอก) ⇒ ครบ 7 ปุ่ม · Setting = ฟังก์ชันผู้ดูแลกิจกรรม (กลยุทธ์/แผนงาน) ⇒ ครบ 7 ปุ่ม
+     🔴 สิทธิ์ Setting จะผูกทีมกิจกรรมรายปี (ประธาน · รอง · admin · สมาชิก) ตอนทำฐานข้อมูล — ตอนนี้ยังไม่มีด่าน */
+  const TOOLS_BY_TAB = {
+    dashboard: ['refresh', 'search', 'export'],
+    edit:      ['refresh', 'search', 'export', 'import', 'add', 'edit', 'delete'],
+    setting:   ['refresh', 'search', 'export', 'import', 'add', 'edit', 'delete'],
+  };
+  const TOOL_TH = { refresh: 'รีเฟรช', search: 'ค้นหา', export: 'Export', import: 'Import', add: 'เพิ่ม', edit: 'แก้ไข', delete: 'ลบ' };
+  const tools = (TOOLS_BY_TAB[tab] || TOOLS_BY_TAB.dashboard).map(k => ({ key: k, label: TOOL_TH[k], onClick: notYet(TOOL_TH[k]) }));
 
   return (
-    <Page>
-      <PageHeader icon="🎯" title={act ? act.label : tr('กิจกรรม')}
+    <Page top="flush">
+      <PageHeader layout="std" icon="🎯" title={act ? act.label : tr('กิจกรรม')}
         tabs={ACTIVITY_TABS} tab={tab} onTab={setTab} tools={tools} />
       {/* ③ Card Dashboard — ยังไม่มีข้อมูล: เขียนบนจอตรงๆ (กฎความซื่อสัตย์ของจอ · ห้ามโชว์ 0) */}
       <div data-activity-card="1" style={{
