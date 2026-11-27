@@ -442,7 +442,13 @@ select "ทุกส่วนงาน/PD1..PD4" บนหัวจอ SQDCM เ
   · ตัวคูณจากปฏิทินเท่านั้น (วันทำงาน 1.5 · ot15 1.5 · ot2 2) · วันที่ไม่มีในปฏิทิน = ไม่คิด + เขียนบอก
 - **ยังต้องเคาะ:** กะดึกมีค่ากะ/ค่าเข้าเวรบวกไหม (ถ้ามี = ตัวเลขตั้งค่าอีกตัว ไม่ใช่สูตรซ่อน) · ตัวเลขเริ่มต้น 50 บาท/ชม. ใช่ไหม
 
-## 💡 ถัดไป (user 26/11 · ยังไม่ทำ): ค่าซ่อมจากใบ MO เข้าแกน C ด้วย
+## 🔧 แกน C บวก "ค่าซ่อม MO" — ทำแล้ว 27/11 (user: "ใช้ค่าที่ช่างกรอก นับตอนผู้แจ้งอนุมัติรับมอบ ทำเลย")
+**ที่ลง:** `src/utils/moCost.js` (pure · เทส 3 เคส) — ยอดต่อใบผ่าน `orderCostTotal()` (utils/mtnMoForm.js · แถวรายคน/อะไหล่ชนะ header `labor_cost/parts_cost`) · วันที่นับ = `ho_at` ตามเวลาไทย (`bkkDateStr`) · ไม่นับ cancelled/rejected · ใบที่ยังไม่ลงค่าใช้จ่าย = `nNoCost` เขียนใน note ของ C (ไม่ใช่ 0)
+· โหมดเดือน: `mtn_orders` (ho_at ในกรอบ +07:00) + `mtn_order_labor`/`mtn_order_parts` ผ่าน fetchByIds · โหมดปี: RPC DR `obeya_mo_cost_rollup` (migration `20261127_obeya_mo_cost_rollup_dr.sql` · Σ ต่อเดือน/ไลน์ · สูตรรายใบลอก orderCostTotal · apply แล้ว)
+· ขอบเขต = `line_name` ของใบผ่าน `lineOk` · ใบไม่ระบุไลน์นับเฉพาะ ทั้งโรงงาน · แผ่น C แท่งที่ 4 สี `--muted` · ท้ายแผ่น "ซ่อม MO X (N ใบ)" · `axisCost/axisCostYear` รับ `moBaht`/`moNote`
+· 🔴 ไม่บวก `mtn_spare_usage_monthly` (อะไหล่เบิกใช้ที่ไม่ผูกใบ) — จะซ้ำกับ parts ของใบ · ถ้าต้องการให้แยกเป็นก้อนของตัวเอง
+
+### (ข้อเสนอเดิม 26/11) ค่าซ่อมจากใบ MO เข้าแกน C ด้วย
 - ข้อมูลมีแล้วฝั่ง DR: `mtn_orders.labor_cost` + `parts_cost` (+ ตารางรายแถว `mtn_order_labor` / `mtn_order_parts.amount` · `grandTotal()` ใน mtn-work-order.md) · `cost_center` ของใบ · อะไหล่เบิกใช้ `mtn_spare_usage_monthly.qty_out × mtn_spare_parts.unit_price`
 - ที่เสนอ: ก้อนที่ 4 ของ C = "ค่าซ่อม MO" (ค่าแรงช่าง + อะไหล่) นับใบที่ปิดในช่วง ตามไลน์/CC ของใบ · โหมดปีผ่าน `kpi_mtn_rollup` (เพิ่ม Σ labor/parts ต่อเดือน) · อะไหล่เบิกใช้ที่ไม่ผูกใบ MO = ก้อนแยก "อะไหล่ใช้ไป" ห้ามบวกซ้ำกับ parts_cost ของใบ
 - ต้องเคาะ: ใบ MO ใช้ `labor_cost` ที่ช่างกรอก (ราคามาตรฐาน `mtn_labor_rates`) หรือค่าแรง OT 50 บาทตัวเดียวกัน · อะไหล่นับตอน "เบิก" หรือตอน "ปิดใบ"
