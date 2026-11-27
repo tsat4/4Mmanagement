@@ -176,65 +176,70 @@ Realtime + Edge Functions/Deno) · Telegram Bot API · deploy = Render.com (Stat
 
 ---
 
-## OEE (computeOEE ใน DailyReport) — กฎ P สำหรับหลาย MAT.NO (2026-07-14)
+## OEE — จำนวนชิ้น: %P · %Q · "ยอดผลิต" (เจ้าของสูตร `src/utils/oee.js`)
 
 
 > ### 🔴🔴 กฎเหล็กข้าม session — **ตัวเศษ %P = "ทุกชิ้นที่เครื่องทำออกมา" ไม่ใช่แค่งานดี** (2026-10-04)
 > `P = CT × Total Count ÷ Run` · `Q = Good ÷ Total Count` · **Total Count = ดี + เสีย + ทดลอง + สงสัย + ซ่อม**
 > **งานทดลองเข้าด้วย** · 🔧 **ชิ้นรอซ่อม (`qty_repair`) เข้าด้วย** (25/11) — ตัวเติมตัวเศษ = **`defectQtyForP`**
-> (`defectQtyAll` = ชุดพาเรโต/มูลค่า **ห้ามสลับ**) · ไม่หัก %Q แต่ **จอต้องเขียนว่ารอซ่อมกี่ชิ้น** (`sumReworkPending`)
-> ⇒ `defectQtyAll` ⇒ QA ตัดสินของสงสัย **%Q ขยับ · %P ไม่ขยับ**
+> (`defectQtyAll` = ชุดพาเรโต/มูลค่า **ห้ามสลับ**) · **จอต้องเขียนว่ารอซ่อมกี่ชิ้น** (`sumReworkPending`)
+> · 🔴 **QA ตัดสินของสงสัย/ผลซ่อม ⇒ %Q ขยับ · %P ไม่ขยับ** (ตัวเศษ %P นับทุกชิ้นไว้แล้วตั้งแต่ผลิต)
 > · เติมผ่าน **`ngByMatFrom()`** → `ngForP` (จอสด) · ปิดกะคิดเองจาก `defects` · **ห้ามบวกในหน้า**
 >   คิวรี `defect_logs` ต้อง embed `prod_orders(mat_no)` · ด่าน `oee-live-needs-ngforp`
-> · 🔴 **ชี้ MAT ไม่ได้ = ไม่รู้ CT ⇒ ไม่เข้า %P ต้องเขียนบนจอ (`ngNoMatP`)** · "ผลิตได้" ยังเป็นงานดี
-
-> ### 🔴🔴 กฎเหล็กข้าม session — downtime ที่ทับ "เวลาพักตามนโยบาย" ห้ามหักซ้ำ (2026-09-15)
-> · **ทุกจุดที่เอา downtime ไปหักจากฐานเวลา (netAvail/runMin/wLoad/strictOee/MTBF) ต้องผ่าน
->   `dtMinOutsideBreaks()` + `breakIntervalsIn()` ใน `src/utils/oee.js` เท่านั้น ห้ามรวม `duration_min` เองในหน้า**
-> · จุดที่ตอบ "เครื่องหยุดกี่นาที" (พาเรโต/มูลค่า/MTTR/ตาราง DT) ยังใช้ `duration_min` เต็มเหมือนเดิม — **ห้ามสลับ 2 ชุดนี้**
-> · 🔴 **ไลน์เครื่องขนานบันทึก DT รายเครื่อง ⇒ หารจำนวนเลนก่อนหักจากเวลากะ (`laneWeightFn()`) · `dtMinBySession` ต้องส่ง `{ lines }`**
->   (มีด่าน) · 🔴 **stamp `oee_a` ต้อง stamp `actual_qty` ด้วย** (`sessionProducedQty()` · มีด่าน)
->   🔴 **แต่ "ของกลางของไลน์" (คอนเวเยอร์/ระบบลม) หยุด = ไลน์หยุดทั้งไลน์ ห้ามหารเลน** (28/10 · คำสั่ง user)
->   ⇒ ทะเบียน `machines.affects_lanes` ผ่าน **`src/utils/affectsLanes.js`** → `laneWeightFn(N, affectsBy)`
->   · **ว่าง = 1 เลน = พฤติกรรมเดิม** · ห้ามเขียน `1/parallelN` เองในหน้า (ด่าน `lane-weight-single-entry`)
-> · 🏭 **"ไลน์นี้พักกี่นาที" ไม่เท่ากันทุกไลน์** (`break_line_rules` · 20/10) — เจ้าของกฎ **`src/utils/breakLineRules.js`**
->   🔴 **ห้ามทับค่า/ไล่สายเองในหน้า · ห้ามถอดการอ่านทะเบียนกลาง** · จอที่วาดแถบเงาเวลาพักเองมีกฎเพิ่ม
->   (ด่าน `break-line-rules-single-entry` · 📄 `docs/modules/oee.md`)
+> · 🔴 **ชี้ MAT ไม่ได้ = ไม่รู้ CT ⇒ ไม่เข้า %P ต้องเขียนบนจอ (`ngNoMatP`)** (แต่เข้า "ยอดผลิต" ↓)
 
 > ### 🔴🔴 กฎเหล็กข้าม session — **ชิ้น ≠ shot** (งานคู่ gang die / RH-LH · 2026-09-18)
 > CT = เวลาต่อ **1 จังหวะ** แต่ปั๊มทีเดียวได้ 2 ชิ้น ⇒ **ยอดผลิต/%Q/ของเสีย นับ "ชิ้น" ·
-> เวลามาตรฐานของ %P นับ "shot" — ห้ามสลับ**
-> · ยุบผ่าน `collapsePairShots()` (`utils/pairTotals.js`) — **ภาระกะตอนวางแผน ใช้ `pairLoadTotal()`
->   ในไฟล์เดียวกัน** (มีด่าน) · `computeLiveOee` ต้องส่ง `pairMap` ทุกจอ (มีด่าน)
+> เวลามาตรฐานของ %P นับ "shot" — ห้ามสลับ** · ยุบผ่าน `collapsePairShots()` (`utils/pairTotals.js`)
+> · **ภาระกะตอนวางแผน = `pairLoadTotal()`** ไฟล์เดียวกัน · `computeLiveOee` ต้องส่ง `pairMap` ทุกจอ (2 ด่าน)
 
 > ### 🔴🔴 กฎเหล็กข้าม session — **"พาร์ทจริง" = สินค้า ไม่ใช่ MAT ตัวเดียว** (2026-10-05 · คำสั่ง user)
 > `op_parent_mat` = **text ช่องเดียว** ⇒ สินค้าเดียวกันคนละลูกค้า ชั้น OP ไม่ยุบ = **นับซ้ำเงียบๆ**
-> · ยุบผ่าน `collapseOps` ที่อ่าน **`alts`** จาก `loadOpInfo()` — จับกลุ่มด้วย **แกน `p_no`
->   (`partCoreOf` · `src/utils/partGroup.js`) เท่านั้น ห้ามใช้ชื่อ/`family_id`** (มีด่าน) ·
->   `alts` ว่าง = พฤติกรรมเดิมเป๊ะ
+> · ยุบผ่าน `collapseOps` ที่อ่าน **`alts`** จาก `loadOpInfo()` — จับกลุ่มด้วยแกน `p_no`
+>   (`partCoreOf` · `src/utils/partGroup.js`) **ห้ามใช้ชื่อ/`family_id`** (มีด่าน) · `alts` ว่าง = เดิมเป๊ะ
 
 > ### 🔴🔴 กฎเหล็กข้าม session — **"ของสงสัย" ยังไม่ใช่ของเสีย จนกว่า QA จะตัดสิน** (2026-09-30 · คำสั่ง user)
 > · **ของสงสัย = ยังไม่รู้ว่าดีหรือเสีย ⇒ กันออกจาก %Q แล้ว "เขียนบนจอว่ารอพิจารณากี่ชิ้น"**
 >   ผลพิจารณาอ่านจาก `quality_bin_records` · ตัดสินที่ `suspectState()` (§7.1 `oee.js`) **ห้ามคิดเองในหน้า**
 > · 🔴 **%Q = `defectQty` · พาเรโต/มูลค่า/รายการ = `defectQtyAll` · ตัวเศษ %P = `defectQtyForP` — ห้ามสลับ**
+> · 🔴🔴 **"ยอดผลิต" = ทุกชิ้นที่เครื่องทำออกมา ไม่ใช่ `qty_ok`/`actual_qty`** (25/11 · คำสั่ง user
+>   *"ยอดผลิต = งานดี + งานต้องสงสัย"*) ⇒ ป้าย "ยอดผลิต/ผลิตได้" ทุกจอต้องผ่าน **`producedTotalCount()`**
+>   และ **%Q = `qRatio(qTotalCount(…), ของเสีย)` — สูตรเดียวทั้งระบบ ห้ามเขียน `x/(x+ng)` เอง**
+>   (เคยมี 3 สำเนา ⇒ QA ตัดสินแล้วจอสด/กะที่ปิดแล้วตอบคนละเลข · 2 ด่าน `q-ratio-single-entry`
+>   `produced-total-count-not-qty-ok`) · 🔴 **ฐาน %Q ตัดงานทดลองออก (`qTotalCount`) แต่ "ยอดผลิต"
+>   ที่โชว์นับด้วย (`producedTotalCount`) — คนละคำถาม** · 🔴 **จอหน่วย "คู่/shot" ต้องยุบของเสียก่อนบวก**
 > · 🔴 **คิวรีที่เอาไปคิด %Q ต้องต่อ `${QBIN_EMBED}` ใน select** ไม่ต่อ = `suspectState()` คืน `unknown`
 >   แล้วถอยไปใช้พฤติกรรมเดิม · มีด่าน `oee-suspect-needs-qbin-embed`
 >   🔴 กะที่ QA ยังไม่ตัดสิน = **ค่าชั่วคราว** ต้องคิดใหม่เมื่อตัดสิน (`restampSessionQByDefects()` · ใบเหลืองครอบ = กฎเดียวกัน)
-
-> ### 🔴🔴 กฎเหล็กข้าม session — **ปิดกะต้องตรึง CT + นโยบายพักเป็น snapshot** (2026-11-11 · คำสั่ง user)
-> `ct_snapshot`/`break_snapshot` (DR) · เจ้าของกฎ **`src/utils/oee.js` §snapshot** · **เก็บ input ไม่ใช่ช่วงพักสำเร็จรูป**
-> · 🔴 **ไม่มี snapshot = ถอยไปทะเบียนสดเป๊ะ ห้ามบล็อก ห้าม backfill กะเก่า** · 🔴 **มีแล้วห้ามทับด้วยทะเบียนวันนี้** (2 ด่าน)
 
 > ### 🔴🔴 กฎเหล็กข้าม session — **PPM มีสูตรที่เดียว** `src/utils/oee.js` §7.3 (2026-11-16)
 > `ppmOf` · `ppmFromDefects` · `fmtPpm` — **ห้ามคูณ 1e6 เองในหน้า** (2 ด่าน) · ตัวเศษ/ตัวหารฐานเดียวกัน
 > (งานทดลองออกทั้งคู่ `trialState()` · แยกไม่ออก = `unsureQty` ให้จอเขียน **ห้ามเดา**)
 > · 🔴 **ตัวหาร = "ชิ้น" (ยอดสแกนดี) ห้ามใช้ยอดที่ยุบคู่ RH/LH** · ผลิต 0 แต่มีของเสีย = **`null`**
-> · 🔴 **ห้าม clamp ค่าที่สูง** (เกิน 100 ได้ปกติ) · 📄 `docs/modules/oee.md` §PPM
+>   · **ห้าม clamp ค่าที่สูง** (เกิน 100 ได้ปกติ) · 📄 `docs/modules/oee.md` §PPM
 
 > ### 🧩 ของเสียเลือก "พาร์ทลูก" ได้ แต่ **ไม่เข้าสูตร %Q/%P เลย** (2026-11-16 · คำสั่ง user)
 > `defect_logs.child_*` · ของกลาง **`src/utils/defectPart.js`** · ยังหักที่ MAT แม่ **1 ชิ้น = 1 ชิ้น**
-> 🔴 **ห้ามคูณ/หาร `child_qty_per_fg` ในสูตรใดๆ** (มีด่าน) · 🔴 **ไม่มีลูกใน BOM/อ่านไม่ได้ = ยังลงของเสียได้
-> ห้ามบล็อก** · ลิสต์ลูกผ่าน `useBomChildren` เท่านั้น
+> 🔴 **ห้ามคูณ/หาร `child_qty_per_fg` ในสูตรใดๆ** (มีด่าน) · **ไม่มีลูกใน BOM/อ่านไม่ได้ = ยังลงของเสียได้
+> ห้ามบล็อก** · ลิสต์ลูกผ่าน `useBomChildren`
+
+## OEE — ฐานเวลา (%A): downtime · เวลาพัก · snapshot ตอนปิดกะ
+
+> ### 🔴🔴 กฎเหล็กข้าม session — downtime ที่ทับ "เวลาพักตามนโยบาย" ห้ามหักซ้ำ (2026-09-15)
+> · **ทุกจุดที่เอา downtime ไปหักจากฐานเวลา (netAvail/runMin/wLoad/strictOee/MTBF) ต้องผ่าน
+>   `dtMinOutsideBreaks()` + `breakIntervalsIn()` ใน `src/utils/oee.js` เท่านั้น ห้ามรวม `duration_min` เองในหน้า**
+> · จุดที่ตอบ "เครื่องหยุดกี่นาที" (พาเรโต/มูลค่า/MTTR/ตาราง DT) ยังใช้ `duration_min` เต็มเหมือนเดิม — **ห้ามสลับ 2 ชุดนี้**
+> · 🔴 **ไลน์เครื่องขนาน: หารจำนวนเลนก่อนหักจากเวลากะ** — `laneWeightFn()` · `dtMinBySession` ต้องส่ง `{ lines }`
+>   🔴 **แต่ "ของกลางของไลน์" (คอนเวเยอร์/ระบบลม) หยุด = ไลน์หยุดทั้งไลน์ ห้ามหารเลน** (28/10 · คำสั่ง user)
+>   ⇒ `machines.affects_lanes` ผ่าน **`src/utils/affectsLanes.js`** · ว่าง = 1 เลน = พฤติกรรมเดิม
+>   · ห้ามเขียน `1/parallelN` เองในหน้า (ด่าน `lane-weight-single-entry`)
+> · 🔴 **stamp `oee_a` ต้อง stamp `actual_qty` ด้วย** (`sessionProducedQty()` · มีด่าน)
+> · 🏭 **"ไลน์นี้พักกี่นาที" ไม่เท่ากันทุกไลน์** — เจ้าของกฎ **`src/utils/breakLineRules.js`** (`break_line_rules`)
+>   🔴 **ห้ามทับค่า/ไล่สายเองในหน้า · ห้ามถอดการอ่านทะเบียนกลาง** (ด่าน `break-line-rules-single-entry`)
+
+> ### 🔴🔴 กฎเหล็กข้าม session — **ปิดกะต้องตรึง CT + นโยบายพักเป็น snapshot** (2026-11-11 · คำสั่ง user)
+> `ct_snapshot`/`break_snapshot` (DR) · เจ้าของกฎ **`src/utils/oee.js` §snapshot** · **เก็บ input ไม่ใช่ช่วงพักสำเร็จรูป**
+> · 🔴 **ไม่มี snapshot = ถอยไปทะเบียนสดเป๊ะ ห้ามบล็อก ห้าม backfill กะเก่า** · 🔴 **มีแล้วห้ามทับด้วยทะเบียนวันนี้** (2 ด่าน)
 
 > 📄 รายละเอียดเต็ม → `docs/modules/oee.md`
 

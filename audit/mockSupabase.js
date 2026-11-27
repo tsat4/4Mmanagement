@@ -524,6 +524,8 @@ const TABLE_ROWS = {
   mtn_orders: (r, i) => ({
     ...r,
     mo_no: `MO-2610-${String(i).padStart(3, '0')}`,
+    /* 🔧 27/11 ค่าซ่อม MO บนแกน C: ใบที่รับมอบแล้ว (ho_at ด้านล่าง = วันล่าสุด) บางใบมีค่าใช้จ่าย บางใบยังไม่ลง (null ทั้งคู่ = สาขา nNoCost) · ห้ามถอด */
+    labor_cost: i % 6 === 5 ? 450 : null, parts_cost: i % 6 === 5 ? 1200.5 : null,
     status: ['pending', 'assigned', 'repaired', 'checked', 'handover', 'closed'][i % 6],
     mtn_dept: ['production', 'maintenance', 'jig_maintenance'][i % 3],
     qa_skipped_at: null, purpose: i % 4 === 0 ? 'improve' : 'repair',
@@ -537,7 +539,7 @@ const TABLE_ROWS = {
     repair_done_at: i % 6 >= 2 ? '2026-08-07T08:00:00+07:00' : null,
     check_at:       i % 6 >= 3 && i % 5 !== 0 ? '2026-08-09T08:00:00+07:00' : null,
     qa_at:          i % 6 >= 4 ? '2026-08-10T08:00:00+07:00' : null,
-    ho_at:          i % 6 >= 4 ? '2026-08-11T08:00:00+07:00' : null,
+    ho_at:          i % 6 >= 4 ? `${_recentDay(i % 5)}T08:00:00+07:00` : null,   // 27/11: วันล่าสุด ให้แกน C เห็นค่าซ่อม MO ในช่วงสัปดาห์นี้
     repair_start_at: null, returned_at: null, vendor_sent_at: null,
     /* 🧑 ชื่อผู้แจ้ง — ลิสต์ MO โชว์เป็นคอลัมน์ตั้งแต่ 13/10 ⇒ ต้องมีทั้ง 3 เคสในด่าน
        (วัดจากฐาน 13/10: 720 ใบ · reported_by_name 689 · reporter_prod 692 · ไม่มีทั้งคู่ 25)
@@ -745,7 +747,9 @@ const TABLE_ROWS = {
   energy_live_meters: (r, i) => {
     const M = [['DB-CNC', 'MDB-03', null], ['DB-LASER', 'MDB-03', null], ['MDB', 'MDB', null], ['MDB-07', 'MDB', 'MDB'],
       ['AIR', 'MDB', 'MDB-07'], ['AC-06', 'MDB', 'AIR'], ['AC-07', 'MDB', 'AIR'], ['ORPHAN', 'MDB-03', 'NOPE']][i % 8];
-    return { ...r, scope_kind: 'zone', scope_name: i < 8 ? M[0] : `${M[0]}-${i}`, panel: M[1], parent_name: M[2], is_active: i < 8, sort_order: i, limit_kw: 1000, gauge_max_kw: 1000 };
+    return { ...r, scope_kind: 'zone', scope_name: i < 8 ? M[0] : `${M[0]}-${i}`, panel: M[1], parent_name: M[2], is_active: i < 8, sort_order: i, limit_kw: 1000, gauge_max_kw: 1000,
+      // ⏸️ เกณฑ์รอ (27/11 · ห้ามถอด) — ORPHAN 5<10 = รอ · DB-LASER/MDB ≥ เกณฑ์ = ทำงาน · ที่เหลือว่าง = ออนไลน์ (ไม่ตัดสิน)
+      idle_kw: i < 8 ? ({ ORPHAN: 10, 'DB-LASER': 10, MDB: 500 }[M[0]] ?? null) : null };
   },
   energy_live: (r, i) => {
     const N = ['DB-CNC', 'DB-LASER', 'MDB', 'MDB-07', 'AIR', 'AC-06', 'AC-07', 'ORPHAN'];
@@ -761,7 +765,8 @@ const TABLE_ROWS = {
     // ตู้ MDB ใน mock มีชั้นบนสุด 2 ตัว (MDB · MDB-10) ⇒ สลับกัน นาทีเดียวกันได้ทั้งคู่ (7 นาทีล่าสุด)
     const t = Math.floor(Date.now() / 60000) * 60000 - Math.floor((14 - i) / 2) * 60000;
     const k = Math.floor(i / 2);
-    return { ...r, scope_kind: 'zone', scope_name: i % 2 ? 'MDB-10' : 'MDB', bucket_at: new Date(t).toISOString(), kw: 900, kw_max: 980, kwh_total: (i % 2 ? 5000 : 1000) + k * 15 };
+    return { ...r, scope_kind: 'zone', scope_name: i % 2 ? 'MDB-10' : 'MDB', bucket_at: new Date(t).toISOString(), kw: 900, kw_max: 980, kwh_total: (i % 2 ? 5000 : 1000) + k * 15,
+      v1: 392 + (k % 3), v2: 390 + (k % 2), v3: 394 - (k % 3) };   // 🔌 แรงดันรายเฟส (ingest v11 · กราฟ 3 เฟสหน้าประวัติ)
   },
   /* 🌱 EF ไฟฟ้า (2026-11-25 · ห้ามถอด) — เดิมไม่มี utility_key ⇒ efFor() ไม่เจอ = การ์ด CO₂ บนบอร์ด + แท็บรายเดือนวาดแต่กิ่ง "ยังไม่ได้ตั้ง" */
   energy_emission_factors: (r, i) => ({ ...r, utility_key: 'electric', kg_co2e: i % 2 ? 0.493 : 0.482, effective_from: i % 2 ? '2023-11-28' : '2026-10-21', source_ref: 'TGO (mock)' }),
@@ -1426,12 +1431,22 @@ const BENEFITS_DR = [
 const BENEFITS_ROLL = () => (benefitsCall++ % 2 === 0 ? BENEFITS_MAIN : BENEFITS_DR)
   .map(([kind, key, month_key, n, val]) => ({ kind, key, month_key, n, val }))
 
+/* 🔔 แจ้งเตือนที่ยังค้าง (27/11 · ห้ามถอด) — ค่าเริ่มของ rpc คืนแถวที่ไม่มี scope_name/message ⇒ การ์ดวาดกิ่ง "มีรายการ" ไม่ได้ */
+const ENERGY_OPEN_ALERTS = () => ([
+  { scope_name: 'DB-LASER', code: 'kw', level: 'warn', message: 'โหลดเกิน 137.0 kW (ลิมิต 123 kW)', ev_time: new Date(Date.now() - 3600000).toISOString() },
+  { scope_name: 'AC-06', code: 'offline', level: 'warn', message: 'ขาดการติดต่อ', ev_time: new Date(Date.now() - 7200000).toISOString() },
+])
 const RPC_RESULT = {
+  fn_energy_open_alerts: ENERGY_OPEN_ALERTS,
   esm_benefits_rollup: BENEFITS_ROLL,
   pm_usage_daily: PM_USAGE_DAILY,
   kpi_mtn_rollup: KPI_MTN_ROLL,
   obeya_year_rollup: OBEYA_YEAR,
   obeya_attendance_rollup: OBEYA_ATTEND,
+  obeya_mo_cost_rollup: () => ([
+    { m: '2026-01', line: 'LINE 060', cc: '2140600001', n: 5, n_nocost: 1, labor: 1800, parts: 3250.5 },
+    { m: '2026-02', line: null, cc: null, n: 2, n_nocost: 2, labor: null, parts: null },
+  ]),
   esm_schema_overview: () => ({ at: '2026-09-22T01:00:00Z', tables: SCHEMA_TABLES, fks: SCHEMA_FKS }),
   esm_schema_table: (args) => {
     const name = args?.p_table || 'four_m_logs'

@@ -56,6 +56,7 @@ import { checkWrite, checkWriteRows } from '../utils/dbWrite';
 import { otCostOf, otCostYearRows, otRateText } from '../utils/otCost';   // 💸 26/11 ค่า OT = ก้อนที่ 3 ของแกน C
 import { loadCompanyCalendar, getDayType } from '../utils/companyCalendar';
 import { otPeriodMeta } from '../utils/otPeriods';
+import { moCostOf, moCostYearRows, MO_COST_EXCLUDED_STATUSES } from '../utils/moCost';   // 🔧 27/11 ค่าซ่อม MO = ก้อนที่ 4 ของแกน C
 import { fetchAllPages, fetchByIds } from '../utils/fetchByIds';
 import { inSectionScope, scopedLineNames } from '../utils/sectionScope';
 import useOrgScope from '../utils/useOrgScope';
@@ -209,6 +210,11 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
   const [otRateFail, setOtRateFail] = useState(false);
   const [calReady, setCalReady] = useState(false);
   const [bookings, setBookings] = useState([]);
+  /* 🔧 ใบ MO ที่ผู้แจ้งรับมอบในช่วง (ho_at ตามเวลาไทย) + แถวค่าแรง/อะไหล่รายใบ (ค่าที่ช่างกรอก · user 27/11) · โหลดล้ม = moBad ⇒ C เขียนบอก ห้ามเงียบ */
+  const [moOrders, setMoOrders] = useState([]);
+  const [moLabor, setMoLabor] = useState({});
+  const [moParts, setMoParts] = useState({});
+  const [moBad, setMoBad] = useState(false);
   useEffect(() => {
     supabase.from('obeya_cost_settings').select('ot_wage_per_hour').eq('id', 'default').maybeSingle()
       .then(({ data, error }) => { if (error || !data) setOtRateFail(true); else setOtRate(Number(data.ot_wage_per_hour)); });
@@ -256,7 +262,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
       const ids = sRes.rows.map(s => s.id);
 
       // ⚠️ ห้าม .in(ids) ตรงๆ — ช่วงเดือนมี 400+ กะ URL ยาวเกินเพดาน proxy แล้วคืนค่าว่างเงียบ
-      const [dtRes, dfRes, ordRes, pRes, atRes, bkRes] = await Promise.all([
+      const [dtRes, dfRes, ordRes, pRes, atRes, bkRes, moRes] = await Promise.all([
         fetchByIds(ids, c => supabaseDR.from('downtime_logs')
           /* ⚠️ ข้อความอิสระของ downtime ชื่อ `description` **ไม่ใช่ `reason`** — ไม่มีคอลัมน์ชื่อนั้นในตาราง
              เขียนผิดมาตั้งแต่สร้างบอร์ด ⇒ คิวรีนี้ล้มทั้งก้อน แผง "ทำไมถึงหลุดเป้า" กับครึ่งหนึ่งของ C
@@ -277,11 +283,25 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
         fetchAllPages(() => supabase.from('ot_night_bookings')
           .select('work_date, employee_id, ot_period')
           .gte('work_date', from).lte('work_date', to), { orderBy: ['work_date'] }),
+        /* 🔧 ใบ MO รับมอบในช่วง — ho_at เป็น timestamptz ⇒ กรอบ 00:00–23:59:59 เวลาไทย (+07:00) ของ from..to */
+        fetchAllPages(() => supabaseDR.from('mtn_orders')
+          .select('id, status, ho_at, line_name, cost_center, labor_cost, parts_cost')
+          .gte('ho_at', `${from}T00:00:00+07:00`).lte('ho_at', `${to}T23:59:59+07:00`), { orderBy: ['ho_at', 'id'] }),
       ]);
+      /* แถวค่าแรง/อะไหล่รายใบ (ยอดต่อใบผ่าน orderCostTotal — แถวชนะ header) */
+      const moIds = (moRes.rows || []).filter(o => !MO_COST_EXCLUDED_STATUSES.includes(o.status)).map(o => o.id);
+      const [mlRes, mpRes] = moIds.length ? await Promise.all([
+        fetchByIds(moIds, c => supabaseDR.from('mtn_order_labor').select('order_id, amount, rate_per_hour, hours').in('order_id', c)),
+        fetchByIds(moIds, c => supabaseDR.from('mtn_order_parts').select('order_id, amount, qty, unit_price').in('order_id', c)),
+      ]) : [{ rows: [] }, { rows: [] }];
 
       if (!live()) return;
       setSess(sRes.rows); setPrevSess(pRes.rows);
       setDts(dtRes.rows); setDefs(dfRes.rows); setOrders(ordRes.rows); setAttend(atRes.rows); setBookings(bkRes.error ? [] : bkRes.rows);
+      setMoOrders(moRes.error ? [] : moRes.rows);
+      const groupBy = (rows) => { const m = {}; (rows || []).forEach(r => { (m[r.order_id] || (m[r.order_id] = [])).push(r); }); return m; };
+      setMoLabor(groupBy(mlRes.rows)); setMoParts(groupBy(mpRes.rows));
+      setMoBad(!!(moRes.error || moRes.truncated || mlRes.error || mpRes.error));
       // โหลดไม่ครบ = ตัวเลขต่ำกว่าจริง **ต้องบอกบนจอ** ห้ามเงียบ (บทเรียนแท็บแนวโน้ม /oee-analytics)
       // กะโหลดไม่ได้ = ไม่มี id ไปดึง downtime ⇒ "ว่าง" ของ downtime ก็เชื่อไม่ได้เช่นกัน
       setDtBad(!!(dtRes.error || dtRes.truncated || sRes.error || sRes.truncated));
@@ -313,10 +333,12 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
     const live = begin();
     setLoading(true);
     try {
-      const [dr, at] = await Promise.all([
+      const [dr, at, mo] = await Promise.all([
         supabaseDR.rpc('obeya_year_rollup', { p_from: from, p_to: to }),
         supabase.rpc('obeya_attendance_rollup', { p_from: from, p_to: to }),
+        supabaseDR.rpc('obeya_mo_cost_rollup', { p_from: from, p_to: to }),   // 🔧 27/11 ค่าซ่อม MO ต่อเดือน/ไลน์ (Σ อย่างเดียว)
       ]);
+      setMoBad(!!mo.error);
       if (!live()) return;
       const bad = dr.error || at.error;
       /* RPC ฝั่ง DR ล้ม = ไม่มีทั้ง downtime และของเสีย ⇒ C/Pareto ต้องเทา "โหลดไม่ได้"
@@ -327,6 +349,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
       setYr({
         sessions: j.sessions || [], downtime: j.downtime || [], defects: j.defects || [], orders: j.orders || [],
         attend: Array.isArray(at.data) ? at.data : [],
+        mo: Array.isArray(mo.data) ? mo.data : [],
       });
       const mats = [...new Set((j.defects || []).map(d => d.mat).filter(Boolean))];
       if (mats.length) {
@@ -471,14 +494,18 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
     bookings.forEach(b => { const h = otPeriodMeta(b.ot_period)?.hours; if (h) bkHours[`${b.employee_id}|${b.work_date}`] = h; });
     const ot = otCostOf({ logs: fAttend, rate: otRate, dayTypeOf: calReady ? getDayType : () => null, bookingHoursOf: (e, d) => bkHours[`${e}|${d}`] ?? null });
     Object.entries(ot.byDate).forEach(([wd, b]) => { (byDay[wd] || (byDay[wd] = { k: wd, dt: 0, ng: 0 })).ot = Math.round(b.baht); });
+    /* 🔧 ค่าซ่อม MO (ค่าที่ช่างกรอก · นับวันรับมอบ) — ขอบเขตตามไลน์ของใบ (ใบไม่ระบุไลน์ = นับเฉพาะ ทั้งโรงงาน) */
+    const mo = moCostOf({ orders: moOrders.filter(o => (o.line_name ? lineOk(o.line_name) : isPlant(scope))), laborByOrder: moLabor, partsByOrder: moParts });
+    Object.entries(mo.byDate).forEach(([wd, b]) => { (byDay[wd] || (byDay[wd] = { k: wd, dt: 0, ng: 0 })).mo = Math.round(b.baht); });
+    const moNote = moBad ? 'โหลดใบ MO ไม่ได้ — ค่าซ่อมไม่ถูกนับ' : (mo.nNoCost ? `${mo.nNoCost} ใบ MO รับมอบแล้วแต่ยังไม่ลงค่าใช้จ่าย` : '');
     const otNote = otRateFail ? 'โหลดค่าแรง OT ไม่ได้ — ค่า OT ไม่ถูกนับ'
       : (ot.rows && ot.unknownRate) ? 'ยังไม่ตั้งค่าแรง OT — ค่า OT ไม่ถูกนับ'
       : (!calReady && ot.rows) ? 'อ่านปฏิทินบริษัทไม่ได้ — OT คิดที่อัตราวันทำงาน 1.5 ทุกวัน' : '';
     const series = Object.values(byDay).sort((a, b) => a.k.localeCompare(b.k))
-      .map(b => ({ ...b, ot: b.ot || 0, v: Math.round(b.dt + b.ng + (b.ot || 0)) }));
-    return { ...axisCost({ dtBaht, ngBaht, otBaht: ot.baht ?? 0, otNote, series, missingRate: noRate.size, missingCost: noCost.size, sessions: fSess.length }),
-      otHours: ot.hours, otRows: ot.rows, otHolidayGuess: ot.holidayGuess };
-  }, [fDts, fDefs, fSess, fAttend, bookings, otRate, otRateFail, calReady, lines, ccRates, partCost]);
+      .map(b => ({ ...b, ot: b.ot || 0, mo: b.mo || 0, v: Math.round(b.dt + b.ng + (b.ot || 0) + (b.mo || 0)) }));
+    return { ...axisCost({ dtBaht, ngBaht, otBaht: ot.baht ?? 0, otNote, moBaht: mo.baht, moNote, series, missingRate: noRate.size, missingCost: noCost.size, sessions: fSess.length }),
+      otHours: ot.hours, otRows: ot.rows, otHolidayGuess: ot.holidayGuess, moN: mo.nCost, moNoCost: mo.nNoCost };
+  }, [fDts, fDefs, fSess, fAttend, bookings, otRate, otRateFail, calReady, moOrders, moLabor, moParts, moBad, lineOk, scope, lines, ccRates, partCost]);
 
   // ── โหมดปี: KPI จากผลรวมรายเดือน (obeyaYear.js) — โครงผลลัพธ์เดียวกับโหมดเดือน ─────────
   const kOeeY = useMemo(() => axisOeeYear({ rows: ySess, year, target }), [ySess, year, target]);
@@ -507,8 +534,12 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
     const otNote = otRateFail ? 'โหลดค่าแรง OT ไม่ได้ — ค่า OT ไม่ถูกนับ'
       : (oty.unknownRate && yAttend.some(a => Number(a.ot) > 0)) ? 'ยังไม่ตั้งค่าแรง OT — ค่า OT ไม่ถูกนับ'
       : oty.legacy ? 'ตัวรวมยอดรายปียังไม่แยกชนิด OT (ต้องอัปเดตฐาน) — บางเดือนไม่มีค่า OT' : '';
-    return { ...axisCostYear({ rows, year, missingRate: noRate.size, missingCost: noCost.size, otNote, sessions: ySess.length }), otApprox: oty.approx };
-  }, [yDts, yDefs, ySess, yAttend, otRate, otRateFail, year, lines, ccRates, partCost]);
+    /* 🔧 ค่าซ่อม MO รายปี (RPC Σ ต่อเดือน/ไลน์ · กรองขอบเขตเหมือนโหมดเดือน) */
+    const moy = moCostYearRows((yr?.mo || []).filter(r => (r.line ? lineOk(r.line) : isPlant(scope))));
+    moy.rows.forEach(r => rows.push(r));
+    const moNote = moBad ? 'โหลดสรุปใบ MO ไม่ได้ — ค่าซ่อมไม่ถูกนับ' : (moy.nNoCost ? `${moy.nNoCost} ใบ MO รับมอบแล้วแต่ยังไม่ลงค่าใช้จ่าย` : '');
+    return { ...axisCostYear({ rows, year, missingRate: noRate.size, missingCost: noCost.size, otNote, moNote, sessions: ySess.length }), otApprox: oty.approx, moN: moy.n - moy.nNoCost, moNoCost: moy.nNoCost };
+  }, [yDts, yDefs, ySess, yAttend, yr, otRate, otRateFail, moBad, lineOk, scope, year, lines, ccRates, partCost]);
   const paretoY = useMemo(() => paretoYear(yDts), [yDts]);
 
   /* จอวาดจากชุดเดียว — โหมดปีกับโหมดวันให้โครงผลลัพธ์เหมือนกัน (value/target/state/note/series) */
@@ -737,7 +768,7 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
           <YAxis domain={stacked ? undefined : domain} ticks={stacked ? undefined : ticks} allowDataOverflow={!stacked && !!ticks} tick={tickY} width="auto"
             tickFormatter={stacked ? (v => (v >= 1000 ? `${Math.round(v / 1000)}k` : v)) : undefined} />
           <Tooltip {...chartTip} formatter={stacked
-            ? ((v, nm) => [fmtBaht(v), nm === 'dt' ? tr("เครื่องหยุด") : nm === 'ot' ? tr('ค่า OT') : 'ของเสีย'])
+            ? ((v, nm) => [fmtBaht(v), nm === 'dt' ? tr("เครื่องหยุด") : nm === 'ot' ? tr('ค่า OT') : nm === 'mo' ? tr('ค่าซ่อม MO') : 'ของเสีย'])
             : (v => [fmt(v), name])}
             labelFormatter={(l, pl) => (pl?.[0]?.payload?.summary
               ? `${tr("สรุปปี")} ${year} (${pl[0].payload.kind === 'sum' ? tr('รวมทั้งปี') : tr('เฉลี่ยถ่วงน้ำหนักทั้งปี')})`
@@ -749,8 +780,11 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
               <Bar {...chartAnim()} dataKey="ng" stackId="c" fill="var(--blue)" onClick={onBarClick} cursor="pointer">
                 {data.map((p, i) => <Cell key={i} fill="var(--blue)" fillOpacity={p.summary ? 0.55 : 1} />)}
               </Bar>
-              <Bar {...chartAnim()} dataKey="ot" stackId="c" fill="var(--purple)" radius={[2, 2, 0, 0]} onClick={onBarClick} cursor="pointer">
+              <Bar {...chartAnim()} dataKey="ot" stackId="c" fill="var(--purple)" onClick={onBarClick} cursor="pointer">
                 {data.map((p, i) => <Cell key={i} fill="var(--purple)" fillOpacity={p.summary ? 0.55 : 1} />)}
+              </Bar>
+              <Bar {...chartAnim()} dataKey="mo" stackId="c" fill="var(--muted)" radius={[2, 2, 0, 0]} onClick={onBarClick} cursor="pointer">
+                {data.map((p, i) => <Cell key={i} fill="var(--muted)" fillOpacity={p.summary ? 0.55 : 1} />)}
               </Bar>
             </>
           ) : (
@@ -992,14 +1026,14 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
           {/* ═══ C — ต้นทุน ═══ */}
           {has('C') && (
           <Sheet k={k} cw={cw} idx={3} icon={axisSheet('C').icon} title={tr('C ต้นทุนที่เสียไป')}
-            sub={`${isYear ? tr("รวมทั้งปี · ") : ""}${tr("เครื่องหยุดนอกแผน + ของเสีย + ค่า OT")}${otRate != null ? ` (${tr('OT ประมาณ')} ${otRateText(otRate)} × 1.5/2)` : ''}`}
-            subFull={`${tr("เครื่องหยุดนอกแผน + ของเสีย + ค่า OT")} — ${tr('ค่า OT = ชม. OT จากเช็คชื่อ × ค่าแรงมาตรฐาน × ตัวคูณตามปฏิทิน (วันทำงาน 1.5 · วันหยุด 1.5/2) · ประมาณการให้เห็นภาพ ไม่ใช่ต้นทุนบัญชี')}${kC.otHolidayGuess ? ` · ${tr('วันหยุดที่ไม่มีใบจอง OT คิด 8 ชม.')} ${kC.otHolidayGuess} ${tr('คน-วัน')}` : ''}${kC.otApprox ? ` · ${tr('วันหยุดในโหมดปีคิด 8 ชม./คน')}` : ''}`}
+            sub={`${isYear ? tr("รวมทั้งปี · ") : ""}${tr("เครื่องหยุดนอกแผน + ของเสีย + ค่า OT + ค่าซ่อม MO")}${otRate != null ? ` (${tr('OT ประมาณ')} ${otRateText(otRate)} × 1.5/2)` : ''}`}
+            subFull={`${tr("เครื่องหยุดนอกแผน + ของเสีย + ค่า OT + ค่าซ่อม MO")} — ${tr('ค่าซ่อม MO = ค่าแรง + อะไหล่ที่ช่างกรอกในใบ นับวันที่ผู้แจ้งรับมอบ')} · ${tr('ค่า OT = ชม. OT จากเช็คชื่อ × ค่าแรงมาตรฐาน × ตัวคูณตามปฏิทิน (วันทำงาน 1.5 · วันหยุด 1.5/2) · ประมาณการให้เห็นภาพ ไม่ใช่ต้นทุนบัญชี')}${kC.otHolidayGuess ? ` · ${tr('วันหยุดที่ไม่มีใบจอง OT คิด 8 ชม.')} ${kC.otHolidayGuess} ${tr('คน-วัน')}` : ''}${kC.otApprox ? ` · ${tr('วันหยุดในโหมดปีคิด 8 ชม./คน')}` : ''}`}
             big={kC.value != null ? fmtBaht(kC.value) : '—'}
             stat={costStat}
             foot={kC.note ? <WarnNote k={k} text={kC.note} />
               : (
                 <span>
-                  {`${tr("เครื่องหยุด")} ${fmtBaht(kC.dtBaht)} · ${tr("ของเสีย")} ${fmtBaht(kC.ngBaht)} · OT ${fmtBaht(kC.otBaht)}${!isYear && kC.otHours ? ` (${kC.otHours} ${tr('ชม.')})` : ''}`}
+                  {`${tr("เครื่องหยุด")} ${fmtBaht(kC.dtBaht)} · ${tr("ของเสีย")} ${fmtBaht(kC.ngBaht)} · OT ${fmtBaht(kC.otBaht)}${!isYear && kC.otHours ? ` (${kC.otHours} ${tr('ชม.')})` : ''} · ${tr('ซ่อม MO')} ${fmtBaht(kC.moBaht)}${kC.moN ? ` (${kC.moN} ${tr('ใบ')})` : ''}`}
                   {canManage && !tv && (
                     <button type="button" onClick={() => setOtRateOpen(true)} title={tr('ตั้งค่าแรงมาตรฐาน OT (บาท/ชม.) — ตัวเดียวทั้งโรงงาน · ประมาณการให้หน้างานเห็นภาพ')}
                       style={{ marginLeft: 6, background: 'none', border: '1px solid var(--border2)', borderRadius: 'var(--r-md)', color: 'var(--accent)', fontSize: 'inherit', padding: '0 6px', cursor: 'pointer' }}>
@@ -1015,10 +1049,11 @@ export default function ObeyaSqdcmBoard({ tabs, tab, onTab }) {
                   <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
                   <XAxis dataKey="label" tick={axisTick} interval="preserveStartEnd" />
                   <YAxis tick={axisTick} width="auto" tickFormatter={v => (v >= 1000 ? `${Math.round(v / 1000)}k` : v)} />
-                  <Tooltip {...chartTip} formatter={(v, n) => [fmtBaht(v), n === 'dt' ? tr("เครื่องหยุด") : n === 'ot' ? tr('ค่า OT') : 'ของเสีย']} />
+                  <Tooltip {...chartTip} formatter={(v, n) => [fmtBaht(v), n === 'dt' ? tr("เครื่องหยุด") : n === 'ot' ? tr('ค่า OT') : n === 'mo' ? tr('ค่าซ่อม MO') : 'ของเสีย']} />
                   <Bar {...chartAnim()} dataKey="dt" stackId="c" fill="var(--amber)" />
                   <Bar {...chartAnim()} dataKey="ng" stackId="c" fill="var(--blue)" />
-                  <Bar {...chartAnim()} dataKey="ot" stackId="c" fill="var(--purple)" radius={[2, 2, 0, 0]} />
+                  <Bar {...chartAnim()} dataKey="ot" stackId="c" fill="var(--purple)" />
+                  <Bar {...chartAnim()} dataKey="mo" stackId="c" fill="var(--muted)" radius={[2, 2, 0, 0]} />
                 </BarChart>
               </ResponsiveContainer>
             ) : <EmptyChart k={k} text={tr("ยังไม่มีความสูญเสียที่คิดเป็นเงินได้")} />}

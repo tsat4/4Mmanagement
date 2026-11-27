@@ -26,7 +26,7 @@ import { parallelUnitsOf, flowModeOf } from '../utils/lineTypes';
 import { lazy, Suspense } from 'react';
 import { defectUnitCost, fmtBaht, lineCostCenter, rateFor, ratePerHour, RATE_COMPONENTS } from '../utils/costSaving';
 import { loadAffectsLanes } from '../utils/affectsLanes';
-import { computeSessionOee, computeLiveOee, shiftStartDate, LIVE_MIN_ELAPSED, strictOee, wavg, wLoad, wRun, wProd, policyBreakForShift, breakIntervalsIn, dtMinOutsideBreaks, laneWeightFn, parallelNBySession, dtLineMin, laneBySessionId, buildCtMap, sumDefectQty, splitDefectQty, ngByMatFrom, isTrialDefect, avgOeeTarget, QBIN_EMBED, defectQty, defectQtyAll, suspectPendingQty } from '../utils/oee';
+import { qRatio, computeSessionOee, computeLiveOee, shiftStartDate, LIVE_MIN_ELAPSED, strictOee, wavg, wLoad, wRun, wProd, policyBreakForShift, breakIntervalsIn, dtMinOutsideBreaks, laneWeightFn, parallelNBySession, dtLineMin, laneBySessionId, buildCtMap, sumDefectQty, splitDefectQty, ngByMatFrom, isTrialDefect, avgOeeTarget, QBIN_EMBED, defectQty, defectQtyAll, suspectPendingQty } from '../utils/oee';
 import { statusColor, statusOf } from '../utils/statusTone';
 import PageHeader from '../components/PageHeader';
 import Page from '../components/Page';
@@ -127,12 +127,12 @@ function aggregateByProduct({ sessions, ordersBySession, downtimes, defects, pro
     if (R.byProductOverlap) overlap = true;
     for (const g of R.byProduct) {
       const cur = acc.get(g.key) || { key: g.key, name: g.name, pNo: g.pNo, matNos: new Set(),
-        netAvailMin: 0, runMin: 0, stdMin: 0, pcs: 0, good: 0, ngQty: 0, shifts: 0,
+        netAvailMin: 0, runMin: 0, stdMin: 0, pcs: 0, good: 0, ngQty: 0, qBasePcs: 0, shifts: 0,
         overlap: false, lines: new Set() };
       g.matNos.forEach(m => cur.matNos.add(m));
       cur.name ||= g.name; cur.pNo ||= g.pNo;
       cur.netAvailMin += g.netAvailMin; cur.runMin += g.runMin; cur.stdMin += g.stdMin;
-      cur.pcs += g.pcs; cur.good += g.good; cur.ngQty += g.ngQty;
+      cur.pcs += g.pcs; cur.good += g.good; cur.ngQty += g.ngQty; cur.qBasePcs += g.qBasePcs || 0;
       cur.shifts += 1; cur.overlap = cur.overlap || g.overlap;
       cur.lines.add(sess.line_name);
       acc.set(g.key, cur);
@@ -141,7 +141,9 @@ function aggregateByProduct({ sessions, ordersBySession, downtimes, defects, pro
   const rows = [...acc.values()].map(r => {
     const A = r.netAvailMin > 0 ? Math.min(1, r.runMin / r.netAvailMin) : null;
     const P = r.runMin > 0 ? Math.min(1, r.stdMin / r.runMin) : null;
-    const Q = (r.good + r.ngQty) > 0 ? r.good / (r.good + r.ngQty) : null;
+    /* 🔴 %Q = งานดี ÷ **ยอดผลิต** ผ่านสูตรกลาง `qRatio` (oee.js §7.2.2) ห้ามคิดเองที่นี่ —
+       `qBasePcs` = ฐานที่ `computeSessionOee` คิดมาแล้วรายพาร์ท (ตัดงานทดลองออก) */
+    const Q = qRatio(Math.max(r.qBasePcs, r.good + r.ngQty), r.ngQty);
     return { ...r, matNos: [...r.matNos], lines: [...r.lines], A, P, Q,
       oee: (A != null && P != null && Q != null) ? A * P * Q : null };
   }).sort((a, b) => (a.oee == null) - (b.oee == null) || (a.oee ?? 0) - (b.oee ?? 0));
@@ -733,7 +735,8 @@ export default function OEEAnalytics() {
     return computeLiveOee({
       session: sess, orders: os, downtimes: tdDowntimes.filter(d => d.session_id === sess.id),
       ctMap: tdCtMap, ngQty: sumDefectQty(defs, 'line'), workDate: tdDate,
-      ngForP: ngByMatFrom(defs, os), pairMap: tdPairMat, affectsLanes: affectsLn,
+      /* ฐานของ %Q = ยอดผลิต (oee.js §7.2.2) ⇒ ส่งแถวดิบ ไม่ใช่ `ngForP` ที่นับงานทดลองด้วย */
+      ngForP: ngByMatFrom(defs, os), qRows: defs, pairMap: tdPairMat, affectsLanes: affectsLn,
       nowMs: lastUpdate?.getTime?.() || Date.now(),
       parallelN: parallelUnitsOf(flowByLine[sess.line_name]),
       parallelCap: flowModeOf(flowByLine[sess.line_name]?.flow_mode) === 'parallel_machine'

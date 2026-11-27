@@ -437,6 +437,8 @@ export default function Dashboard({ view = 'timeline' }) {
         ngQty: sumDefectQty(defectBySession[s.id] || [], 'line'),
         // ของเสีย/ทดลองกินรอบเครื่อง → เข้าตัวเศษ %P ด้วย (utils/oee.js `ngByMatFrom`)
         ngForP: ngByMatFrom(defectBySession[s.id] || [], ordersBySession[s.id] || []),
+        /* ฐานของ %Q = ยอดผลิต (oee.js §7.2.2) ⇒ ต้องส่งแถวดิบ ไม่ใช่ `ngForP` ที่นับงานทดลองด้วย */
+        qRows: defectBySession[s.id] || [],
         workDate: s.work_date,
         parallelN: parallelUnitsOf(line),
         parallelCap: flowModeOf(line?.flow_mode) === 'parallel_machine' ? parallelUnitsOf(line) : 1,

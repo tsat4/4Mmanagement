@@ -33,7 +33,10 @@ const statusMeta = (m) => (
   m.status === 'never' ? { label: 'ยังไม่เคยได้รับค่า', color: IDLE }
     : m.status === 'offline' ? { label: `${tr("ขาดการติดต่อ")} ${m.ageMin} ${tr("นาที")}`, color: WARN }
       : (m.overKw || m.overA) ? { label: 'เกินลิมิต', color: BAD }
-        : { label: 'ออนไลน์', color: GOOD });
+        // ⏸️ ทำงาน/รอ (27/11) — เฉพาะมิเตอร์ที่ตั้งเกณฑ์ (idle_kw) · ไม่ตั้ง = "ออนไลน์" ตามเดิม
+        : m.runState === 'idle' ? { label: `${tr('รอ')} (< ${fmt(m.idleKw, 1)} kW)`, color: WARN }
+          : m.runState === 'run' ? { label: 'ทำงาน', color: GOOD }
+            : { label: 'ออนไลน์', color: GOOD });
 
 export default function EnergyLiveBoard() {
   const [meters, setMeters] = useState([]);
@@ -47,6 +50,7 @@ export default function EnergyLiveBoard() {
   const [missing, setMissing] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [panelCfg, setPanelCfg] = useState(null);
+  const [openAlerts, setOpenAlerts] = useState(null);   // 🔔 แจ้งเตือนที่ยังไม่หาย (fn_energy_open_alerts · 27/11) · null = ยังโหลด · { err } · { rows }
   const [factors, setFactors] = useState(null);     // energy_emission_factors · null = ยังโหลด · { err } = อ่านไม่ได้   // { [panel]: { demand_target_kw } } · { err:true } = อ่านไม่ได้
   const [nowMs, setNowMs] = useState(() => Date.now());
   const cursor = useRef({ day: null, last: null });   // กราฟ: วันที่โหลดอยู่ + นาทีล่าสุดที่มีแล้ว
@@ -73,7 +77,7 @@ export default function EnergyLiveBoard() {
     try {
       const [m, l, d, r] = await Promise.all([
         supabaseDR.from('energy_live_meters')
-          .select('scope_kind, scope_name, display_name, panel, parent_name, subtitle, limit_kw, limit_a, gauge_max_kw, sort_order')
+          .select('scope_kind, scope_name, display_name, panel, parent_name, subtitle, limit_kw, limit_a, gauge_max_kw, idle_kw, sort_order')
           .eq('is_active', true),
         supabaseDR.from('energy_live').select('scope_kind, scope_name, field, value, received_at'),
         supabaseDR.from('energy_daily')
@@ -86,6 +90,10 @@ export default function EnergyLiveBoard() {
       /* 🎯 เป้า Demand 15 นาทีต่อตู้ (energy_panel_settings · 25/11) — best-effort: อ่านไม่ได้ = การ์ดเขียนว่าอ่านเป้าไม่ได้ */
       const ps = await supabaseDR.from('energy_panel_settings').select('panel, demand_target_kw, baseline_start, baseline_end');
       if (id === reqId.current) setPanelCfg(ps.error ? { err: true } : Object.fromEntries((ps.data || []).map(x => [x.panel, x])));
+      /* 🔔 แจ้งเตือนที่ยังค้าง = START ที่ยังไม่มี CLEAR ตามหลัง + ขาดการติดต่อที่ยังไม่กลับ (ฝั่ง DB คิดคู่ให้ · 30 วัน)
+         อ่านไม่ได้ = การ์ดเขียนบอก ห้ามโชว์ 0 */
+      const oa = await supabaseDR.rpc('fn_energy_open_alerts', { p_days: 30 });
+      if (id === reqId.current) setOpenAlerts(oa.error ? { err: oa.error.message } : { rows: oa.data || [] });
       // เครื่องใต้ตู้ — best-effort: ตารางยังไม่ apply / อ่านไม่ได้ = การ์ดไม่มีรายชื่อเครื่อง (ตัวเลขยังขึ้นปกติ)
       const mm = await supabaseDR.from('energy_meter_machines').select('scope_kind, scope_name, machines(machine_no, line_name)');
       if (id === reqId.current && !mm.error) {
@@ -175,6 +183,12 @@ export default function EnergyLiveBoard() {
   }
 
   const t = board.totals;
+  const labelOf = (name) => board.meters.find(x => x.name === name)?.label || name;
+  const runCount = board.meters.reduce((c, m) => {
+    if (m.idleKw != null) c.set++;
+    if (m.runState === 'run') c.run++; else if (m.runState === 'idle') c.idle++;
+    return c;
+  }, { set: 0, run: 0, idle: 0 });
   const lastRecv = board.meters.map(m => m.receivedAt).filter(Boolean).sort().pop();
   const allPeak = Object.values(panelPeaks).filter(Boolean);
 
@@ -222,9 +236,20 @@ export default function EnergyLiveBoard() {
                 ))}
                 <span style={{ color: 'var(--muted)' }}>{tr('รวมทุกตู้บนบอร์ด (Scope 2) · แท็บรายเดือนใช้ยอดบิลเมื่อมี')}</span></>} />
         <Kpi color={t.offline || t.never ? WARN : GOOD} label={tr('สถานะมิเตอร์')} value={t.online} unit={`/ ${t.total} ${tr("ออนไลน์")}`}
-          sub={<><span style={{ color: WARN }}>{tr('ขาดการติดต่อ')} {t.offline}</span> · <span style={{ color: 'var(--muted)' }}>{tr('ยังไม่เคยส่ง')} {t.never}</span></>} />
+          sub={<><span style={{ color: WARN }}>{tr('ขาดการติดต่อ')} {t.offline}</span> · <span style={{ color: 'var(--muted)' }}>{tr('ยังไม่เคยส่ง')} {t.never}</span>
+            {/* ⏸️ ทำงาน/รอ — นับเฉพาะมิเตอร์ที่ตั้งเกณฑ์แล้ว · ไม่มีเลย = บอกว่ายังไม่ได้ตั้ง */}
+            <div>{runCount.set
+              ? <>{tr('ทำงาน')} {runCount.run} · <span style={{ color: WARN }}>{tr('รอ')} {runCount.idle}</span> <span style={{ color: 'var(--muted)' }}>({tr('ตั้งเกณฑ์แล้ว')} {runCount.set}/{t.total})</span></>
+              : <span style={{ color: 'var(--muted)' }}>{tr('ยังไม่ได้ตั้งเกณฑ์รอ — แท็บตั้งค่าตู้')}</span>}</div></>} />
         <Kpi color={t.alerts.length ? BAD : GOOD} label={tr('เกินลิมิตตอนนี้')} value={t.alerts.length} unit={tr("เครื่อง")}
           sub={t.alerts.length ? `${tr("ที่")} ${t.alerts.map(m => m.label).join(', ')}` : tr("ทุกเครื่องอยู่ในลิมิต (นับเฉพาะเครื่องที่ออนไลน์)")} />
+        {/* 🔔 แจ้งเตือนที่ยังค้าง (27/11) — จากเหตุการณ์ Node-RED: เริ่มแล้วยังไม่หาย · คนละตัวกับ "เกินลิมิตตอนนี้" (ค่าสดที่จอตัดสิน) */}
+        <Kpi color={openAlerts?.rows?.length ? BAD : openAlerts?.err ? WARN : GOOD} label={tr('แจ้งเตือนที่ยังค้าง')}
+          value={openAlerts?.rows ? openAlerts.rows.length : '—'} unit={tr('รายการ')}
+          sub={openAlerts == null ? '…' : openAlerts.err ? <span style={{ color: WARN }}>{tr('อ่านแจ้งเตือนไม่ได้')}</span>
+            : !openAlerts.rows.length ? tr('ไม่มีแจ้งเตือนค้าง (30 วันล่าสุด)')
+            : <>{openAlerts.rows.slice(0, 3).map((a, i) => <div key={i}>{labelOf(a.scope_name)}: {a.message || a.code} <span style={{ color: 'var(--muted)' }}>({tr('ตั้งแต่')} {new Date(a.ev_time).toLocaleString(dateLocale(), { timeZone: 'Asia/Bangkok', day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' })})</span></div>)}
+                {openAlerts.rows.length > 3 && <span style={{ color: 'var(--muted)' }}>{tr('และอีก')} {openAlerts.rows.length - 3} {tr('รายการ')}</span>}</>} />
       </div>
 
       {/* ── เส้นทางจ่ายไฟ ── */}

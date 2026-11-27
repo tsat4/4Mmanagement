@@ -24,7 +24,7 @@ import { PURPOSES, CAUSE_CATS, needsPlantManager, needsApprovalFirst, laborAmoun
 import AuditLogViewer from '../components/AuditLogViewer';
 import StepFlow from '../components/StepFlow';
 import { can, canDelete, isActionSeeded, isSharedAccount } from '../utils/permissions';
-import { ackWaitsOnMe } from '../utils/myQueue';   // ✍️ กฎ "ใบนี้รอเราเซ็นรับทราบไหม" ที่เดียว (23/11)
+import { ackWaitsOnMe, signWaitsOnMe } from '../utils/myQueue';   // ✍️ กฎ "ใบนี้รอเราเซ็นไหม" ที่เดียว (23/11 · sign 27/11)
 import { confirmSign, needsSignConfirm } from '../utils/signConfirm';
 import { moTimeline } from '../utils/mtnTimeline';   // ⏱️ 4 ช่วงของไลน์หยุด (คำศัพท์ชุดเดียวของระบบ)
 import { MO_DONE_STATUSES, MO_STATUS_META as STATUS_META, QA_NOT_RELATED, QA_RELATED, QA_SKIP_REASON_STEP4, canBounceBack, canDoStep, canHandoff, canSignMtnApproval, canSkipQa, isMoOpen, isOrderReporter, isQaSkipped, isWaitingQa, lastStep, orderReporterText, nextStepOf, moQaState, mtnCloseStage, moStatusLabel, moStatusMeta, orderInReporterScope, stageOf, stepDenyHint, stepLabel, stepMeta, moFlow, moWaitMeta, qaRelatedView, moRemoveMode, canCancelOwnMo, canCancelReportedMo, MO_REMOVE_BLOCKED, MO_REMOVE_CANCEL, MO_REMOVE_DELETE, actorSideOf, stepAssumptions, assumptionHint, showsAccountHint, canFillMoDetails } from '../utils/mtnStepPerm';
@@ -112,7 +112,7 @@ import MachineRepairHistory from '../components/MachineRepairHistory';
 import { prPlacement, assignedTechsOf, joinTechs, prQueueStateOf, PR_QUEUE_META, PR_QUEUE_COLS } from '../utils/mtnPurchase';
 import { ioNoOf, buildIoIndex } from '../utils/moIoNo';   // 💳 "ใบนี้ลง I/O ไหน" ตอบที่เดียว (18/11)
 import { purgeMoQuotes } from '../lib/moQuotes';          // 🧾 ปิดใบสมบูรณ์ = ลบไฟล์ใบเสนอราคา (18/11)
-import { MACHINE_USABILITY, machineUsability, usabilityNeedsNote, usabilityPatch } from '../utils/machineUsability';   // 🔌 ปุ่มเปิด-ปิดเครื่อง (19/11)
+import { MACHINE_USABILITY, machineUsability, usabilityNeedsNote, usabilityNeedsAsk, usabilityPatch } from '../utils/machineUsability';   // 🔌 ปุ่มเปิด-ปิดเครื่อง (19/11)
 import { tr as trI18n } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 /* ตัวเลือกตัวกรองงาน PR — ลำดับตามขั้นงานจริงที่ทีม MTN เขียนมา (02/11):
@@ -488,7 +488,7 @@ const DateField = ({ label, value, onChange, required }) => (
 
 /* ═══════════════════════════════════════════════════════ */
 export default function MtnRepair() {
-  const { role, lineId, sections: scopeSecs, mtnTeams: userMtnTeams, fullName, signatureUrl, allUnits, scopeIdx } = useContext(UserContext);
+  const { role, lineId, sections: scopeSecs, mtnTeams: userMtnTeams, fullName, signatureUrl, allUnits, scopeIdx, position: myPosition } = useContext(UserContext);
   const isMobile = useIsMobile();   // 📱 รายการ = การ์ดต่อใบ (15/10 · docs/MOBILE-UX-STANDARD.md §4 ชนิด B)
   // แท็บผูก ?tab= (แชร์ลิงก์/refresh/Back อยู่แท็บเดิม) — ข้อมูลหลัก อยู่ท้ายสุดและโผล่ตามสิทธิ์
   const TAB_DEFS = [
@@ -543,6 +543,11 @@ export default function MtnRepair() {
      🔴 **ไม่บังคับสถานะ** — ใบที่ปิดแล้วก็ยังค้างช่องนี้ได้ (วัด 24/10: 10 ใบ) และย้อนเซ็นได้
         ⇒ สลับช่อง "ยังไม่ปิด → ทุกสถานะ" เองเพื่อเห็นใบที่ปิดแล้วด้วย */
   const fAck = sp.get('ack') || '';
+  /* ✍️ `?sign=<stage>` — "ใบที่รอ *เรา* เซ็นในขั้นนี้" (27/11 · หน้างานแจ้ง)
+     ป้าย "รอคุณเซ็น N ใบ" ในคิวงานเคยลิงก์มาที่ `?wait=<stage>` = "ใบที่ค้างขั้นนี้" เฉยๆ
+     ⇒ ไม่รู้จักกฎ "รอเราจริง" และกฎลูป PR ⇒ ป้ายบอก 4 กดเข้าไปเจอ 14 ปนใบที่กดอนุมัติไม่ได้
+     🔴 ตัดสินด้วย `signWaitsOnMe()` **กฎเดียวกับที่นับป้ายนั้น** (ด่าน `sign-queue-single-rule`) */
+  const fSign = sp.get('sign') || '';
   /* 🔗 ธง "คนกดช่องกรองเองบนหน้า" (ไม่ใช่เดินมาจากลิงก์) — ใช้ตัดสินว่าจะปลดช่องทีมให้ไหม
      ดูเหตุผลเต็มที่เอฟเฟกต์ `queueLinkSeen` ด้านล่าง */
   const inPageFilterEdit = useRef(false);
@@ -690,16 +695,16 @@ export default function MtnRepair() {
      🔴 **ปลดเฉพาะตอน "เดินมาจากลิงก์"** — กดเลือกขั้น/งาน PR เองบนหน้า (`inPageFilterEdit`)
         ห้ามไปล้างทีมที่ user ตั้งใจเลือกไว้
      🔴 ต้องตั้ง `teamDefaulted` ด้วย ไม่งั้นเอฟเฟกต์ตั้งทีมตั้งต้นจะมาทับทีหลังตอน `lines` โหลดเสร็จ */
-  const queueLinkKey = `${fWait}|${fAck}|${fPr}`;
+  const queueLinkKey = `${fWait}|${fAck}|${fPr}|${fSign}`;
   const queueLinkSeen = useRef(null);
   useEffect(() => {
-    if (!(fWait || fAck || fPr)) { queueLinkSeen.current = null; return; }
+    if (!(fWait || fAck || fPr || fSign)) { queueLinkSeen.current = null; return; }
     if (queueLinkSeen.current === queueLinkKey) return;
     queueLinkSeen.current = queueLinkKey;
     teamDefaulted.current = true;
     if (inPageFilterEdit.current) { inPageFilterEdit.current = false; return; }  // คนกดเองบนหน้า — ไม่แตะทีม
     setFDept('');
-  }, [queueLinkKey, fWait, fAck, fPr]);
+  }, [queueLinkKey, fWait, fAck, fPr, fSign]);
   useEffect(() => {
     if (teamDefaulted.current || !lines.length) return;
     // สังกัดทีมเดียว (ไม่ใช่ admin) → เปิดหน้ามาเห็นคิวของทีมตัวเองก่อน (ปรับเป็น "ทุกหน่วยงาน" ได้)
@@ -922,6 +927,14 @@ const HANDOFF_CAP = 2000;
     name: fullName, sections: scopeSecs || [], isShared: isSharedAccount(),
     can: (a) => can('mtn_repair', a, role),
   }), [fullName, scopeSecs, role]);
+  /* ✍️ ตัวตนสำหรับกฎ "ใบนี้รอ *เรา* เซ็น" (`signWaitsOnMe`) — ชุดเดียวกับที่คิวงานส่งให้
+     🔴 ต้องมี `actorSide` + `posRank` ด้วย ไม่งั้น `soleSignerFor()` คืน false ทุกแถว
+        (ไม่รู้ฝั่ง/ตำแหน่ง = ไม่นับ โดยตั้งใจ) ⇒ ตัวกรองจะว่างเปล่าโดยไม่มีอะไรบอก */
+  const signMe = useMemo(() => ({
+    ...ackMe,
+    actorSide: actorSideOf({ mtnTeams: userMtnTeams, role, sections: scopeSecs, isAm: isAmTeam }),
+    posRank: positionRank(myPosition),
+  }), [ackMe, userMtnTeams, role, scopeSecs, myPosition]);
   /* ชั้น "คิว" — ดูลิสต์ตัวกรองด้านบนว่าทำไมต้องเขียนเป็นลิสต์ */
   const queueFilters = useMemo(() => [
     { key: 'wait', label: 'รอขั้น', value: fWait, on: !!fWait, test: o => waitStageOf(o) === fWait },
@@ -930,13 +943,17 @@ const HANDOFF_CAP = 2000;
        🔴 ห้ามเขียนเงื่อนไขเองที่นี่อีก (มีด่าน `ack-queue-single-rule`) */
     { key: 'ack', label: 'รอ ผจก.ต้นสังกัดเซ็นรับทราบ', on: fAck === 'pending',
       test: o => ackWaitsOnMe(o, ackMe) },
+    /* ✍️ 27/11 — กฎเดียวกับป้าย "รอคุณเซ็น" ในคิวงาน (`signWaitsOnMe`) **ห้ามเขียนเงื่อนไขเองที่นี่**
+       🔴 ส่ง `prsForLabel(o)` ด้วย — อ่านใบขอซื้อไม่ได้ = `null` = ไม่ตัดทิ้ง (ไม่รู้ ≠ ไม่ติด) */
+    { key: 'sign', label: 'รอคุณเซ็น', value: fSign,
+      on: !!fSign, test: o => signWaitsOnMe(o, signMe, prsForLabel(o), fSign) },
     { key: 'pr', label: 'งาน PR', value: PR_FILTERS.find(x => x.v === fPr)?.label || fPr,
       on: !!fPr && PR_FILTERS.some(x => x.v === fPr), test: prMatch },
     /* ⏳ ใบรอเพิ่มรายละเอียด — ตัดสินด้วย `isDetailsPending()` ห้ามเทียบ `=== true` ลอยๆ ในหน้า
        (คอลัมน์ไม่ได้ select มา = null = ไม่รู้ ⇒ ต้องไม่กรองใบหายไปเงียบๆ) */
     { key: 'doc', label: 'เอกสารใบ MO', value: 'รอเพิ่มรายละเอียด', on: fDoc === 'pending',
       test: o => isDetailsPending(o) === true },
-  ], [fWait, fAck, fPr, prMatch, fDoc]);
+  ], [fWait, fAck, fPr, prMatch, fDoc, fSign, signMe, prsForLabel]);
 
   /* ตัวนับ "รอเพิ่มรายละเอียด" — นับหลังตัวกรองอื่น (ยกเว้นตัวเอง) แบบเดียวกับ prCounts
      🔴 นับได้เฉพาะเมื่อคิวรีส่งธงมาจริง — `known:false` ⇒ ไม่โชว์เลข (ห้ามโชว์ 0 แล้วคนคิดว่าครบ) */
@@ -2622,6 +2639,8 @@ function MachineUsabilityPanel({ order, machines, fullName, canEdit, affectedLin
   const [pick, setPick] = useState(null);     // สถานะที่กำลังจะเลือก (ยังไม่บันทึก)
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
+  /* 🔴 hook ต้องอยู่เหนือ early return ทุกตัว (react-hooks/rules-of-hooks — ผิด = React #310 จอพังทั้งหน้า) */
+  const [openSet, setOpenSet] = useState(false);   // ไม่ทวง = ยุบปุ่มไว้ (ยังกดตั้งเองได้เสมอ)
   if (!order?.machine_no) return null;
   /* 🔴 ไม่เจอเครื่องในทะเบียน = เขียนบอก **ห้ามซ่อนแผงเงียบ** (คนพิมพ์เลขเครื่องเองได้) */
   if (!mc) {
@@ -2632,6 +2651,9 @@ function MachineUsabilityPanel({ order, machines, fullName, canEdit, affectedLin
     );
   }
   const u = machineUsability(mc, []);   // ในใบนี้สนใจแค่ "ช่างประกาศไว้ว่าอะไร"
+  /* ❓ ทวงให้กดยืนยันเฉพาะเคส "แก้ชั่วคราว รอของ" — เกณฑ์อยู่ `usabilityNeedsAsk()` ห้ามเขียนเองที่นี่
+     (27/11 · user: *"สเตปถึงรออนุมัติแล้ว ยังไม่แก้หรอ ที่จะขึ้นมาให้ยืนยันแค่เรื่องที่ซ่อมชั่วคราวรอ PR"*) */
+  const ask = usabilityNeedsAsk(u, { repairPath: order?.repair_path });
   const save = async () => {
     const patch = usabilityPatch(pick, note, fullName);
     if (!patch) return toast.error('เลือกสถานะแล้วพิมพ์เหตุผลด้วย (เหลือง/แดงต้องมีเหตุผล)');
@@ -2650,13 +2672,21 @@ function MachineUsabilityPanel({ order, machines, fullName, canEdit, affectedLin
         <span style={{ fontWeight: 700, color: (MACHINE_USABILITY.find(x => x.key === u.state) || {}).color }}>
           {trI18n((MACHINE_USABILITY.find(x => x.key === u.state) || {}).label)}
         </span>
-        {u.source === 'none' && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{trI18n('(ยังไม่มีใครกดยืนยัน)')}</span>}
+        {/* 🔴 ขึ้นเฉพาะตอนที่ "ยังตอบจากใบไม่ได้จริง" — ใบที่ซ่อมจบรอแค่ลายเซ็น ไม่มีอะไรต้องประกาศ */}
+        {ask && <span style={{ fontSize: 11, color: 'var(--amber)' }}>{trI18n('— รอของมาเปลี่ยน: ช่วยกดยืนยันว่าเครื่องใช้งานได้แค่ไหน')}</span>}
         {affectedLines.length > 0 && (
           <span style={{ fontSize: 11, color: 'var(--amber)' }}>⚡ {trI18n('จ่าย')} {affectedLines.length} {trI18n('ไลน์')}</span>
         )}
       </div>
       {u.text && <div style={{ fontSize: 11.5, color: 'var(--text2)', marginTop: 3, lineHeight: 1.6 }}>{u.text}</div>}
-      {canEdit && (
+      {/* ไม่ทวง = ยุบไว้หลังลิงก์เล็กๆ — **ห้ามเอาปุ่มออก** ช่างต้องตั้งสถานะเองได้ทุกเมื่อ */}
+      {canEdit && !ask && !openSet && (
+        <button type="button" onClick={() => setOpenSet(true)}
+          style={{ ...btnGhost, padding: '3px 9px', fontSize: 11.5, marginTop: 6 }}>
+          {trI18n('🔌 ตั้งสถานะเครื่อง')}
+        </button>
+      )}
+      {canEdit && (ask || openSet) && (
         <>
           <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
             {MACHINE_USABILITY.map(x => (

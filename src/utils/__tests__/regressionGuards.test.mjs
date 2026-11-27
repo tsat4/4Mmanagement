@@ -2302,6 +2302,67 @@ test('🛡️ oee-live-needs-ngforp — ทุกจุดที่เรีย�
     + bad.map(f => '   • ' + f).join('\n') + '\n');
 });
 
+/* 🛡️ q-ratio-single-entry (2026-11-25 · คำสั่ง user "ยอดผลิต = งานดี + งานต้องสงสัย")
+   สูตร %Q เคยมี **3 สำเนา** เขียนมือ: `computeLiveOee` · `computeSessionOee` · `restampQPatch`
+   ⇒ ตอน QA ตัดสินของสงสัย/ผลซ่อม จอสดกับกะที่ปิดแล้วตอบคนละเลขจากข้อมูลชุดเดียวกัน
+   ตอนนี้ยุบเหลือ `qRatio()` ตัวเดียว (oee.js §7.2.2) + ฐานจาก `qTotalCount()`
+   🔴 กฎนี้จับ "ตัวหารที่เขียนมือ" ไม่ใช่แค่ชื่อฟังก์ชัน — แพตเทิร์น `x / (x + ng)` คือสิ่งที่
+      คนเขียนใหม่โดยไม่รู้ว่ามีของกลางอยู่แล้ว (เป็นสูตรที่ "ดูถูก" จนไม่มีใครสงสัย) */
+test('🛡️ q-ratio-single-entry — ห้ามเขียนตัวหาร %Q เองนอก oee.js', () => {
+  /* ยกเว้นรายไฟล์ — ต้องเขียนเหตุผลทุกตัว */
+  const ALLOW = {
+    /* เทสเหล่านี้ "ตรึงค่าของสูตรเดิม" ไว้เทียบ — ตัวเลขดิบในเทสไม่ใช่โค้ดที่รันบนจอ */
+    'src/utils/__tests__/producedTotalCount.test.mjs': 'เทียบค่าสูตรเดิม/ใหม่ให้เห็นส่วนต่าง',
+    'src/utils/__tests__/qualityZeroOutput.test.mjs': 'เรียก qRatio ของจริง + สแกนซอร์ส',
+    /* %VA ของ VSM = เวลาที่เพิ่มค่า ÷ (VA + NVA) — คนละ KPI คนละหน่วย (วินาที) ไม่ใช่ %Q */
+    'src/lib/vsmModel.js': '%VA (vaSec/(vaSec+nvaSec)) — สัดส่วนเวลา ไม่ใช่สัดส่วนชิ้น',
+    /* FTT = First Time Through — ตัวหารเขียนไว้ว่า "ผลิตจริง = total + ng" พร้อมเหตุผลในหน้า
+       🔴 ยังไม่ย้ายมา `qRatio` เพราะเป็น KPI แยก (ของสงสัยที่รอ QA ควรเข้าฐานไหมยังไม่เคาะ)
+          — ถ้าจะย้าย ต้องถาม user ก่อน เพราะเลข FTT ที่รายงานไปแล้วจะขยับ */
+    'src/pages/QualityControl.jsx': 'FTT (KPI แยก) — ตัวหารมีเหตุผลเขียนกำกับในหน้า',
+  };
+  const bad = [];
+  for (const file of walk(join(ROOT, 'src'), ['.jsx', '.js', '.mjs'])) {
+    const rel = relative(ROOT, file);
+    if (rel === 'src/utils/oee.js' || ALLOW[rel]) continue;
+    const code = stripComments(readFileSync(file, 'utf8'));
+    /* `<ตัวแปร> / (<ตัวแปรเดิม> + <อะไรก็ได้>)` = สูตร %Q/สัดส่วนที่เขียนมือ */
+    const re = /([A-Za-z_$][\w$.]*)\s*\/\s*\(\s*\1\s*\+/g;
+    let m;
+    while ((m = re.exec(code))) {
+      const line = code.slice(0, m.index).split('\n').length;
+      bad.push(`${rel}:${line}  (${m[0].trim()}…)`);
+    }
+  }
+  assert.deepEqual(bad, [],
+    '\n\n❌ เขียนตัวหารแบบ `x / (x + y)` เอง — ถ้านี่คือ %Q ให้ใช้ของกลาง\n'
+    + '   ทำไมห้าม: ตัวหารของ %Q คือ **ยอดผลิต** (ทุกชิ้นที่เครื่องทำออกมา) ไม่ใช่ "ยอดสแกน + ของเสีย"\n'
+    + '            ⇒ ชิ้นที่ซ่อมเสร็จ/ของสงสัยที่ QA เคลียร์ จะไม่มีทางกลับมาเป็นของดีของกะต้นทาง\n'
+    + '            และสำเนาที่ 2 ของสูตรจะไม่ขยับตาม = จอเดียวกันตอบ 2 ค่า (เคยเกิดจริง 3 สำเนา)\n'
+    + '   แก้ยังไง: import { qRatio, qTotalCount } from "../utils/oee"\n'
+    + '            const Q = qRatio(qTotalCount(<ยอดสแกน>, <แถว defect_logs>), <ของเสียที่ตัดสินแล้ว>)\n'
+    + '            ถ้าไม่ใช่ %Q (เป็นสัดส่วนอื่นจริงๆ) ให้เติม ALLOW ในเทสนี้พร้อมเหตุผล\n\n'
+    + bad.map(f => '   • ' + f).join('\n') + '\n');
+});
+
+/* 🛡️ produced-total-count-not-qty-ok (2026-11-25 · คำสั่ง user)
+   user: *"ยอดผลิตไม่ใช่ `qty_ok` นะ ยอดผลิต = งานดี + งานต้องสงสัย"*
+   จอที่เขียนป้าย "ยอดผลิต/ผลิตได้" แล้วโชว์ยอดสแกนเฉยๆ = ต่ำกว่าความจริง (วัดจริง Line 61
+   กะเช้า 11/11: โชว์ 445 ทั้งที่เครื่องทำออกมา 475) ⇒ บังคับให้ DailyReport เดินผ่านของกลาง */
+test('🛡️ produced-total-count-not-qty-ok — การ์ด/แผงสรุปของ DailyReport ต้องใช้ producedTotalCount', () => {
+  const code = readFileSync(join(ROOT, 'src/pages/DailyReport.jsx'), 'utf8');
+  assert.ok(/producedTotalCount\(/.test(code),
+    '\n\n❌ DailyReport ไม่เรียก producedTotalCount() แล้ว\n'
+    + '   ทำไมต้องมี: ป้าย "ยอดผลิต" ต้องหมายถึงทุกชิ้นที่เครื่องทำออกมา ไม่ใช่ยอดสแกน\n'
+    + '   แก้ยังไง: import { producedTotalCount } from "../utils/oee" แล้วใช้กับทุกช่องที่เขียนว่ายอดผลิต\n');
+  /* การ์ดภาพรวมอยู่หน่วย "คู่/shot" ⇒ ต้องยุบของเสียด้วยกติกาเดียวกันก่อน ห้ามบวกชิ้นดิบเข้าไป */
+  assert.ok(/pairAwareOpTotal\([^)]*produced:\s*r\.pcs/s.test(code.replace(/\n/g, ' ')),
+    '\n\n❌ ยอดผลิตบนการ์ดภาพรวมไม่ได้ยุบคู่ RH/LH ด้วยรางเดียวกับยอดดี\n'
+    + '   ทำไมห้าม: การ์ดนี้อยู่หน่วย "คู่/shot" (pairAwareOpTotal) · ของเสียเป็น "ชิ้น"\n'
+    + '            บวกตรงๆ = ผสมหน่วย ไลน์งานคู่จะเกินจริงเท่าตัว\n'
+    + '   แก้ยังไง: ใส่ `pcs` ลงแถวราย MAT แล้วส่งผ่าน pairAwareOpTotal ชุดที่ 2 (produced: r.pcs)\n');
+});
+
 test('🛡️ ทุกกฎต้องมี why + fix เขียนกำกับ (ข้อความนี้คือสิ่งที่คนเห็นตอน build ล่ม)', () => {
   for (const r of RULES) {
     assert.ok(r.why && r.why.length > 30, `${r.id}: ต้องเขียน why ให้เข้าใจว่าเคยพังยังไง`);
@@ -13174,4 +13235,54 @@ test('🛡️ spc-single-formula — computeSPC / SPC_CONST ประกาศ�
   } };
   walk(join(ROOT, 'src'));
   assert.deepEqual(bad, [], '\n\n❌ มีสูตร SPC ชุดที่ 2 — import { computeSPC } from utils/spcCalc แทน\n');
+});
+
+test('🔌 usability-ask-only-pending-parts — ทวงยืนยันสถานะเครื่องเฉพาะเคส "รอของมาเปลี่ยน"', () => {
+  /* 27/11 · user: "ทำไมยังต้องมีให้กดยืนยัน เคสแบบนี้สเตปถึงรออนุมัติแล้ว ยังไม่แก้หรอ
+     ที่จะขึ้นมาให้ยืนยันแค่เรื่องที่ซ่อมชั่วคราวรอ PR"
+     ของเดิมขึ้น "(ยังไม่มีใครกดยืนยัน)" ทุกใบทุกขั้น ⇒ ใบที่ซ่อมจบรอแค่ลายเซ็นก็ยังทวง
+     = ทวงจนคนเลิกสนใจ (คลาสเดียวกับกระดิ่งท่วม)
+     🔴 เกณฑ์อยู่ `usabilityNeedsAsk()` ที่เดียว · หน้าห้ามเทียบ repair_path / source เอง
+     🔴 "ไม่ทวง" ต้องไม่ใช่ "เอาปุ่มออก" — ช่างต้องตั้งสถานะเองได้ทุกเมื่อ */
+  const util = readFileSync(join(ROOT, 'src/utils/machineUsability.js'), 'utf8');
+  assert.match(util, /export function usabilityNeedsAsk\(/,
+    '\n\n❌ ไม่มี usabilityNeedsAsk() ใน utils/machineUsability.js\n');
+  assert.ok(/source === 'declared'\) return false/.test(util),
+    '\n\n❌ usabilityNeedsAsk ไม่ได้กัน "ประกาศไว้แล้ว = ไม่ทวง"\n');
+  assert.ok(/repairPathMeta\(repairPath\)\?\.needsPr/.test(util),
+    '\n\n❌ usabilityNeedsAsk ไม่ได้ผูกกับทะเบียนเส้นทางซ่อม (needsPr) — ห้ามเทียบคีย์เส้นทางเอง\n');
+
+  const page = stripComments(readFileSync(join(ROOT, 'src/pages/MtnRepair.jsx'), 'utf8'));
+  assert.ok(/usabilityNeedsAsk\(/.test(page),
+    '\n\n❌ MtnRepair.jsx ไม่ได้ถาม usabilityNeedsAsk() — กลับไปทวงทุกใบแล้ว\n');
+  assert.ok(/ยังไม่มีใครกดยืนยัน/.test(page) === false,
+    '\n\n❌ MtnRepair.jsx ยังมีป้าย "(ยังไม่มีใครกดยืนยัน)" แบบขึ้นทุกใบ\n');
+  assert.ok(/!ask && !openSet/.test(page),
+    '\n\n❌ ไม่มีทางยุบปุ่มตั้งสถานะไว้ (หรือเอาปุ่มออกไปเลย)\n'
+    + '   ไม่ทวง ≠ ปิดปุ่ม — ช่างต้องตั้งสถานะเองได้ทุกเมื่อ\n');
+});
+
+test('✍️ sign-queue-single-rule — ป้าย "รอคุณเซ็น" กับลิสต์ที่ป้ายพาไป ต้องใช้กฎเดียวกัน', () => {
+  /* 27/11 · หน้างานแจ้ง: "ทำไมแจ้งเตือนงานที่รออนุมัติ พอกดเข้ามายังเจองานที่ยังติด loop PR อยู่
+     มันยังอนุมัติไม่ได้นิ"
+     ป้ายนับถูกแล้ว (ตัดใบติดลูป PR ออกตั้งแต่ 23/11) แต่ลิงก์พาไป `?wait=<stage>`
+     = "ใบที่ค้างขั้นนี้" เฉยๆ ⇒ ไม่รู้จักทั้งกฎ "รอเราจริง" และกฎ PR ⇒ ป้ายบอก 4 เจอ 14
+     คลาสเดียวกับ ack-queue-single-rule (23/11) เป๊ะ */
+  const q = readFileSync(join(ROOT, 'src/utils/myQueue.js'), 'utf8');
+  assert.match(q, /export function signWaitsOnMe\(/,
+    '\n\n❌ ไม่มี signWaitsOnMe() ใน utils/myQueue.js — กฎ "ใบนี้รอเราเซ็นไหม" ไม่มีเจ้าของ\n');
+  assert.ok(/signWaitsOnMe\(o, me, src\.prOf/.test(q),
+    '\n\n❌ ตัวนับป้ายในคิวไม่ได้ใช้ signWaitsOnMe() — กลับไปเขียนเงื่อนไขซ้ำแล้ว\n');
+  assert.ok(/to: `\/mtn-repair\?tab=list&sign=/.test(q),
+    '\n\n❌ ลิงก์ของป้าย "รอคุณเซ็น" ไม่ได้ชี้ `?sign=<stage>`\n'
+    + '   ชี้ `?wait=` = "ใบที่ค้างขั้นนี้" ซึ่งไม่รู้จักกฎรอเราจริง/กฎ PR ⇒ เลขไม่ตรงป้ายอีกรอบ\n');
+
+  const page = stripComments(readFileSync(join(ROOT, 'src/pages/MtnRepair.jsx'), 'utf8'));
+  assert.ok(/signWaitsOnMe\(o, signMe/.test(page),
+    '\n\n❌ ตัวกรอง `?sign=` ในหน้า MO ไม่ได้ใช้ signWaitsOnMe()\n');
+  assert.ok(/actorSide: actorSideOf\(/.test(page) && /posRank: positionRank\(/.test(page),
+    '\n\n❌ ctx ของตัวกรอง `?sign=` ขาด actorSide / posRank\n'
+    + '   soleSignerFor() จะคืน false ทุกแถว (ไม่รู้ฝั่ง/ตำแหน่ง = ไม่นับ) ⇒ จอว่างเปล่าโดยไม่มีอะไรบอก\n');
+  assert.ok(/prsForLabel\(o\), fSign\)/.test(page),
+    '\n\n❌ ตัวกรอง `?sign=` ไม่ได้ส่งใบขอซื้อ (prsForLabel) ⇒ ใบที่ติดลูป PR จะปนกลับมาอีก\n');
 });
