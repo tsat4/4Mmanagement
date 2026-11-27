@@ -3170,7 +3170,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
   };
 
   return (
-    <Page width="full">
+    <Page width="full" top="flush">
       {/* 🔊📦 ไซเรน "ไลน์เรียกของ" — บอร์ดนี้คือจอทำงานของสโตร์ (24/10 · คำสั่ง user)
           ดังเฉพาะใบที่ "ไลน์เรียก" และยังไม่มีใครรับทราบ · ใบที่สโตร์สร้างเองไม่ดัง (ไม่เตือนตัวเอง)
           🔴 หน้านี้ไม่มี <DowntimeSiren> ⇒ slot=0 ได้ · ถ้าวันหลังเพิ่มไซเรนอื่นในหน้านี้ ต้องแยก slot */}
@@ -3182,6 +3182,7 @@ export default function HeijunkaKanban({ mode = 'monitor', opsStores = null, dir
       {/* Header — UI-STANDARD 2026-09-24: คำอธิบาย+ป้ายดูวันย้อนหลังอยู่ใน sub · ตัวกรองรวมเป็นแถบเดียว */}
       <PageHeader title={tr('บอร์ดคัมบัง (ทุกสโตร์) — Heijunka')} icon="🎴"
         tabs={isOps ? undefined : viewTabs} tab={viewMode} onTab={setViewMode}
+        tools={[{ key: 'refresh', label: 'รีเฟรช', onClick: () => load() }, { key: 'export', label: 'Export CSV', onClick: exportCSV }]}   /* Tool Bar มาตรฐาน (27/11) — ปุ่ม CSV เดิมในแถบกรองยังอยู่ */
         sub={<>
           {tr("ความต้องการพาร์ทย่อย")}{isBackDate ? '' : tr("ตามแผนผลิตวันนี้")} · {tr("แตกจาก BOM ของแต่ละ")} product
           {/* ⚠️ ดูวันย้อนหลัง/ล่วงหน้าต้องเห็นชัด — รอบที่ยังไม่ยืนยันของวันเก่าจะขึ้น 🔴 ค้างส่ง ทั้งกระดาน

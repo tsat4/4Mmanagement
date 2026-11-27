@@ -36,6 +36,7 @@ import { canWriteLine, writeBlockText } from '../utils/writeScope'   // 🔐 A4 
 import { MTN_TEAMS, deptNameOf, teamKeyOf, teamForEquipmentKind, teamsForUser, canWriteTeam, teamBlockText } from '../utils/mtnTeams'
 import { checkWriteRows } from '../utils/dbWrite';
 import NoticeBar from '../components/NoticeBar';
+import EquipSpcModal from '../components/EquipSpcModal'   // 📈 SPC อุปกรณ์ (26/11)
 import { tr, dateLocale } from '../utils/i18n';
 import { getWorkDate } from '../utils/workDate'
 import { amShiftInfo, AM_MO_COLS, loadAmCpLastDone } from '../lib/dailyAmBoard'
@@ -386,7 +387,7 @@ function CpImage({ cp }) {
 }
 
 // ─── Variable Row ───────────────────────────────────────────────────────────
-function VariableRow({ cp, idx, r, onChange, methodIndex, calcText }) {
+function VariableRow({ cp, idx, r, onChange, methodIndex, calcText, onSpc = null }) {
   const avg = computeAvg(r.v1, r.v2, r.v3)
   const status = getSpcStatus(avg, cp)
   const c = status ? STATUS_COLOR[status] : null
@@ -402,6 +403,7 @@ function VariableRow({ cp, idx, r, onChange, methodIndex, calcText }) {
         {method && <span title={tr(method.label)} style={{ fontSize: 13, flexShrink: 0 }}>{method.icon}</span>}
         <p style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--text)', margin: 0 }}>{cp.name}{cp.axis && <span style={{ marginLeft: 6, fontSize: 11, color: 'var(--accent)', border: '1px solid var(--accent)', borderRadius: 'var(--r-xs)', padding: '0 4px' }}>{cp.axis}</span>}</p>
         <CpImage cp={cp} />
+        {onSpc && cp.spc_enabled !== false && <button type="button" onClick={onSpc} title={tr('ดูกราฟ SPC ของข้อนี้')} aria-label={tr('ดูกราฟ SPC ของข้อนี้')} style={{ fontSize: 13, padding: '1px 6px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'transparent', cursor: 'pointer', flexShrink: 0 }}>📈</button>}
         {c && <span style={{ fontSize: 11, fontWeight: 700, color: c.text }}>{status === 'pass' ? '●' : status === 'warning' ? '⚠' : '✕'}</span>}
       </div>
       {calcText && (
@@ -503,7 +505,7 @@ function AttrRow({ cp, idx, value, note, onChangeAttr, onChangeNote, methodIndex
 }
 
 // ─── Measure Row (ค่าวัดเครื่องจักร — อ่านค่าเดียว auto OK/NG) ─────────────────
-function MeasureRow({ cp, idx, r, onChange, methodIndex }) {
+function MeasureRow({ cp, idx, r, onChange, methodIndex, onSpc = null }) {
   const status = measureStatus(r.mval, cp) // 'pass'|'fail'|null
   const c = status ? STATUS_COLOR[status] : null
   const method = methodIndex?.[cp.checking_method]
@@ -518,6 +520,7 @@ function MeasureRow({ cp, idx, r, onChange, methodIndex }) {
         {method && <span title={tr(method.label)} style={{ fontSize: 13, flexShrink: 0 }}>{method.icon}</span>}
         <p style={{ flex: 1, fontSize: 13, fontWeight: 700, color: 'var(--text)', margin: 0 }}>{cp.name}</p>
         <CpImage cp={cp} />
+        {onSpc && cp.spc_enabled !== false && <button type="button" onClick={onSpc} title={tr('ดูกราฟ SPC ของข้อนี้')} aria-label={tr('ดูกราฟ SPC ของข้อนี้')} style={{ fontSize: 13, padding: '1px 6px', borderRadius: 'var(--r-md)', border: '1px solid var(--border2)', background: 'transparent', cursor: 'pointer', flexShrink: 0 }}>📈</button>}
         {c && <span style={{ fontSize: 11, fontWeight: 700, color: c.text }}>{status === 'pass' ? '● OK' : '✕ NG'}</span>}
       </div>
       <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -1103,7 +1106,8 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
      อ่านรูปไม่ได้ = ใบยังตรวจ/บันทึกได้ + เขียนบอกบนจอ (ไม่ล้มทั้งใบ) */
   const [framesByJig, setFramesByJig] = useState({ key: '', map: {}, err: '' })
   const [activeCp, setActiveCp] = useState(null)
-  const [showNdJig, setShowNdJig] = useState(() => new Set())   // 🗓️ เครื่องที่กางข้อ "ยังไม่ถึงรอบ" มาตรวจเพิ่ม
+  const [showNdJig, setShowNdJig] = useState(() => new Set())
+  const [spcCp, setSpcCp] = useState(null)   // 📈 หน้าต่างกราฟ SPC ของข้อ (26/11)   // 🗓️ เครื่องที่กางข้อ "ยังไม่ถึงรอบ" มาตรวจเพิ่ม
   /* 🚫 ใบรวมสถานี = งาน AM ล้วน — ไม่มีจุดชิม (Shim Record) ไม่แตะ PM (26/11 · คำสั่ง user
      "สถานีจะใช้แค่กับ am ไม่ยุ่งกับ pm/shim record เพราะ shim record เป็นงานของส่วนช่าง") · ห้ามเติมกลับ (มีด่าน) */
   const [wide, setWide] = useState(() => typeof window !== 'undefined' && window.matchMedia('(min-width: 1180px)').matches)
@@ -1299,6 +1303,7 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
   const allSaved = secList.length > 0 && pending.length === 0 && noCl.length === 0
   return (
     <div>
+      {spcCp && <EquipSpcModal cp={spcCp.cp} jigName={spcCp.jigName} onClose={() => setSpcCp(null)} />}
       <div style={{ marginBottom: 12, padding: '10px 12px', borderRadius: 'var(--r-md)', background: 'var(--accent-dim)', border: '1px solid var(--border2)' }}>
         <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>🧩 {tr('สถานี')} {station.name}</div>
         <div style={{ fontSize: 12, color: 'var(--text2)', marginTop: 2 }}>
@@ -1348,10 +1353,10 @@ function AmStationSheet({ station, memberJigs, amDept, methodIndex, canRecord, d
             const rowsOnly = !saved && m.cps.map((cp, idx) => {
               const r = results[cp.id] ?? {}
               const row = cp.type === 'variable' ? (
-                <VariableRow cp={cp} idx={idx} r={calcRes[cp.id] ?? { v1: '', v2: '', v3: '' }} onChange={v => setResults(p => ({ ...p, [cp.id]: v }))} methodIndex={methodIndex}
+                <VariableRow cp={cp} idx={idx} r={calcRes[cp.id] ?? { v1: '', v2: '', v3: '' }} onChange={v => setResults(p => ({ ...p, [cp.id]: v }))} methodIndex={methodIndex} onSpc={() => setSpcCp({ cp, jigName: m.jig.name })}
                   calcText={calcOf(cp) ? calcFormula(calcOf(cp), id => { const k = m.cps.findIndex(c => c.id === id); return k < 0 ? '?' : `${tr('ข้อ')} ${k + 1}` }) : null} />
               ) : cp.type === 'measure' ? (
-                <MeasureRow cp={cp} idx={idx} r={r.mval !== undefined ? r : { mval: '' }} onChange={v => setResults(p => ({ ...p, [cp.id]: v }))} methodIndex={methodIndex} />
+                <MeasureRow cp={cp} idx={idx} r={r.mval !== undefined ? r : { mval: '' }} onChange={v => setResults(p => ({ ...p, [cp.id]: v }))} methodIndex={methodIndex} onSpc={() => setSpcCp({ cp, jigName: m.jig.name })} />
               ) : (
                 <AttrRow cp={cp} idx={idx} methodIndex={methodIndex} value={r.attr ?? ''} note={r.note ?? ''}
                   onChangeAttr={v => setResults(p => ({ ...p, [cp.id]: { ...p[cp.id], attr: v } }))}
@@ -1469,6 +1474,7 @@ export default function PMCheckData({ mode = 'pm' }) {
      `checkpoints` ข้างล่าง = ข้อที่ต้องตรวจกะนี้ (ตัวตั้งของ "ครบ/ขาด" · แถวผลตรวจ · หมุด) · ใบ PM ของช่างไม่ใช้ (notDue ว่างเสมอ) */
   const [freqInfo, setFreqInfo] = useState({ key: '', notDue: new Map(), err: '' })
   const [showNotDue, setShowNotDue] = useState(false)
+  const [spcCp, setSpcCp] = useState(null)   // 📈 หน้าต่างกราฟ SPC ของข้อ (26/11)
   const checkpoints = useMemo(() => (showNotDue || !freqInfo.notDue.size ? loadedCps : loadedCps.filter(c => !freqInfo.notDue.has(c.id))),
     [loadedCps, freqInfo, showNotDue])
   const [otherDepts, setOtherDepts] = useState([])   // แผนกอื่นที่ลงจุดตรวจของเครื่องนี้ไว้ (โชว์เมื่อแผนกปัจจุบันยังไม่มี)
@@ -2644,10 +2650,10 @@ export default function PMCheckData({ mode = 'pm' }) {
                             </div>
                           ) : null))
                           const row = cp.type === 'variable' ? (
-                            <VariableRow cp={cp} idx={idx} r={results[cp.id] ?? { v1: '', v2: '', v3: '' }} onChange={v => setResults(prev => ({ ...prev, [cp.id]: v }))} methodIndex={methodIndex}
+                            <VariableRow cp={cp} idx={idx} r={results[cp.id] ?? { v1: '', v2: '', v3: '' }} onChange={v => setResults(prev => ({ ...prev, [cp.id]: v }))} methodIndex={methodIndex} onSpc={() => setSpcCp({ cp, jigName: selectedJig?.name || '' })}
                               calcText={calcOf(cp) ? calcFormula(calcOf(cp), id => { const k = checkpoints.findIndex(c => c.id === id); return k < 0 ? '?' : `${tr("ข้อ")} ${k + 1}` }) : null} />
                           ) : cp.type === 'measure' ? (
-                            <MeasureRow cp={cp} idx={idx} r={results[cp.id] ?? { mval: '' }} onChange={v => setResults(prev => ({ ...prev, [cp.id]: v }))} methodIndex={methodIndex} />
+                            <MeasureRow cp={cp} idx={idx} r={results[cp.id] ?? { mval: '' }} onChange={v => setResults(prev => ({ ...prev, [cp.id]: v }))} methodIndex={methodIndex} onSpc={() => setSpcCp({ cp, jigName: selectedJig?.name || '' })} />
                           ) : (
                             <AttrRow cp={cp} idx={idx} methodIndex={methodIndex}
                               value={results[cp.id]?.attr ?? ''} note={results[cp.id]?.note ?? ''}
@@ -2843,6 +2849,7 @@ export default function PMCheckData({ mode = 'pm' }) {
       </div>
       )}
 
+      {spcCp && <EquipSpcModal cp={spcCp.cp} jigName={spcCp.jigName} onClose={() => setSpcCp(null)} />}
       <AnimatePresence>
         {viewInspection && (
           <HistoryModal inspection={viewInspection} checkpoints={loadedCps} jig={selectedJig}

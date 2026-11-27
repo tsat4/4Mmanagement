@@ -99,7 +99,7 @@ function equipTypeOfMachine(m) {
 
 function newCheckpoint(extra = {}) {
   return {
-    _key: crypto.randomUUID(), name: '', type: 'variable', calc: null, am_check_freq: 'shift',   // _key จุดใหม่ = id ตอน insert (จุดคำนวณอ้างได้ก่อนบันทึก)
+    _key: crypto.randomUUID(), name: '', type: 'variable', calc: null, am_check_freq: 'shift', spc_enabled: true,   // _key จุดใหม่ = id ตอน insert (จุดคำนวณอ้างได้ก่อนบันทึก)
     axis: null, category: null, checking_method: null, unit: '', nominal: '', lsl: '', usl: '', lcl: '', ucl: '',
     // โหมดเกณฑ์ของจุดชนิด "ค่าวัด" — client-only (ขึ้นต้น _ = ไม่ลง DB) เพราะ DB มีแค่ lsl/usl
     // ⚠️ ต้องเป็น state จริง ห้าม derive จาก lsl/usl (ดู mMode ด้านล่าง — เคยทำแล้วกดปุ่มไม่ติด)
@@ -220,6 +220,13 @@ function CheckpointCard({ cp, label, onChange, onDelete, onDuplicate, onCpImage,
           </select>
         </div>
       </div>
+      {/* 📈 SPC อุปกรณ์ (26/11 · utils/equipSpc.js) — ข้อตัวเลขขึ้นกราฟอัตโนมัติ · ปิดได้สำหรับตัวนับ/ข้อที่ไม่ใช่ค่ากระบวนการ */}
+      {(cp.type === 'variable' || cp.type === 'measure') && (
+        <label style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text2)', marginBottom: 10, cursor: 'pointer' }}>
+          <input type="checkbox" checked={cp.spc_enabled !== false} onChange={e => onChange({ spc_enabled: e.target.checked })} />
+          {tr('ขึ้นกราฟ SPC (ปิดถ้าข้อนี้เป็นตัวนับ เช่น รอบการใช้งาน)')}
+        </label>
+      )}
       {/* 🗓️ รอบตรวจรายหัวข้อ — เฉพาะใบของทีม AM (26/11 · utils/amCheckFreq.js) · ใบ PM ของช่างตามรอบแผนทั้งใบ ไม่มีช่องนี้ */}
       {isAm && (
         <div style={{ marginBottom: 10 }}>
@@ -961,6 +968,7 @@ const [allEquipErr, setAllEquipErr] = useState(null)   // 🔴 โหลดร�
             axis: c.type === 'variable' ? (c.axis ?? null) : null,
             category: c.category ?? null, checking_method: c.checking_method ?? null, unit: c.unit || null,
             am_check_freq: isAmTeam(department) ? amFreqOf(c) : 'shift',   // 🗓️ ใบ PM ไม่ใช้ — เก็บค่าเดิมทุกกะ
+            spc_enabled: c.spc_enabled !== false,   // 📈 SPC อุปกรณ์ (26/11) — ปิดรายข้อได้ (ตัวนับ/ข้อที่ไม่ใช่ค่ากระบวนการ)
             nominal: c.nominal !== '' && c.nominal != null ? Number(c.nominal) : null,
             lsl: c.lsl !== '' && c.lsl != null ? Number(c.lsl) : null,
             usl: c.usl !== '' && c.usl != null ? Number(c.usl) : null,

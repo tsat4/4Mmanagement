@@ -1956,7 +1956,7 @@ export default function PlannerSales() {
   }, [shipToMap]);
 
   return (
-    <Page>
+    <Page top="flush">
       <PageHeader
         title={tr('Planner & Sales — Forecast จากลูกค้า')} icon="📈"
         sub={tr('Sales อัพโหลด Forecast/Order จากลูกค้า → ระบบวางแผนภาระการผลิตล่วงหน้า · ติดตามรอบส่งงานรายวันที่หน้า 🚚 Delivery')}
