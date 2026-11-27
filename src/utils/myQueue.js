@@ -185,6 +185,29 @@ export function ackWaitsOnMe(o, me = {}) {
   }).ok;
 }
 
+/**
+ * ✍️ **"ใบนี้รอ *เรา* เซ็น (ขั้นที่ล็อกตำแหน่ง) ไหม"** — เจ้าของกฎที่เดียว
+ *
+ * 🔴 27/11 (หน้างานแจ้ง): *"ทำไมแจ้งเตือนงานที่รออนุมัติ พอกดเข้ามายังเจองานที่ยังติด loop PR อยู่
+ *    มันยังอนุมัติไม่ได้นิ"*
+ *    ต้นเหตุ: ป้าย "รอคุณเซ็น N ใบ" นับถูกแล้ว (ตัดใบที่ติดลูป PR ออกตั้งแต่ 23/11)
+ *    **แต่ลิงก์ของป้ายพาไป `?wait=<stage>`** ซึ่งแปลว่า "ใบที่ค้างอยู่ขั้นนี้" เฉยๆ
+ *    ⇒ ไม่รู้จักทั้งกฎ "รอเราจริง" และกฎ PR ⇒ ป้ายบอก 4 กดเข้าไปเจอ 14 ปนใบที่กดไม่ได้
+ *    **คลาสเดียวกับ `ackWaitsOnMe` (23/11) เป๊ะ — ป้ายกับลิสต์ที่ป้ายพาไป ต้องใช้กฎเดียวกันเสมอ**
+ * 🔴 `prs` = ใบขอซื้อของใบนี้ · **`null` = ไม่รู้ ⇒ ไม่ตัดทิ้ง** (พฤติกรรมเดิมเป๊ะ)
+ * 🔴 `stage` ใส่มาเพื่อกรองเฉพาะขั้นนั้น (ป้ายแยกบรรทัดต่อขั้น) · ไม่ใส่ = ทุกขั้นที่รอเรา
+ * 🔴 ห้ามเขียนเงื่อนไขชุดนี้ซ้ำในหน้า (ด่าน `sign-queue-single-rule`)
+ */
+export function signWaitsOnMe(o, me = {}, prs = null, stage = null) {
+  if (!o) return false;
+  const w = moWaitingOn(o);
+  if (!w?.meta || w.byName) return false;
+  if (stage && (w.meta.stage || `step${w.step}`) !== stage) return false;
+  if (!soleSignerFor(o, w, me)) return false;
+  if (scopeStateOf(o, me) !== 'in') return false;
+  return !moPrBlocked(o, prs);
+}
+
 /* ── ขั้นที่ "ตำแหน่งเดียวเซ็นได้" — นับเป็นงานรอคุณ (2026-10-13 · คำสั่ง user) ──────────────
    *"อย่างอนุมัติ MO สำหรับช่องที่คนเซ็นคือ ผู้จัดการฝ่ายผู้แจ้ง ต้องอนุมัติและอนุมัติได้คนเดียว
      ก็ต้องเตือนแค่ user นั้น และสำคัญกว่าแจ้งเตือนอื่นๆ ของหน่วยงาน"*
@@ -340,8 +363,9 @@ export function buildQueue(src = {}, me = {}, now = new Date()) {
        ⇒ ห้ามนับเป็น "รอคุณเซ็น" · คนที่ต้องลงมือคือช่าง/จัดซื้อ ไม่ใช่ ผจก.
        🔴 ใช้ `moPrBlocked()` ตัวเดียวกับป้ายสถานะในหน้า MO — ห้ามเทียบ PR เองที่นี่
        🔴 ไม่ได้ส่ง `prOf` มา (ผู้เรียกไม่มีข้อมูล PR) = พฤติกรรมเดิมเป๊ะ ไม่ตัดอะไรทิ้ง */
-    if (!w.byName && soleSignerFor(o, w, me) && scopeStateOf(o, me) === 'in'
-        && !moPrBlocked(o, src.prOf ? src.prOf(o) : null)) {
+    /* 🔴 ใช้ `signWaitsOnMe()` ตัวเดียวกับตัวกรอง `?sign=` ในหน้า MO — ห้ามเขียนเงื่อนไขซ้ำที่นี่
+       (27/11: ป้ายกับลิสต์ที่ป้ายพาไปเคยใช้คนละกฎ ⇒ ป้ายบอก 4 กดเข้าไปเจอ 14) */
+    if (signWaitsOnMe(o, me, src.prOf ? src.prOf(o) : null)) {
       mine.push({ ...moItem(o, w, TIER.MINE), sign: true, tag: '✍️ รอคุณเซ็น' });
       /* สะสมไว้ทำ "ป้ายคาไว้" บรรทัดเดียวต่อขั้น (คำสั่ง user 22/10) — ดู signRollup ข้างล่าง */
       const sk = w.meta.stage || `step${w.step}`;
@@ -629,7 +653,9 @@ export function buildQueue(src = {}, me = {}, now = new Date()) {
       detail: ['กดเพื่อเปิดรายการที่รอคุณอนุมัติ',
         g.oldest != null ? `เก่าสุด ${g.oldest.toLocaleString()} วัน` : null].filter(Boolean).join(' · '),
       count: g.count, age: null,
-      to: `/mtn-repair?tab=list&wait=${encodeURIComponent(g.stage)}`
+      /* 🔴 27/11 — ต้องพาไปตัวกรอง `?sign=<stage>` ที่ใช้ `signWaitsOnMe()` **กฎเดียวกับที่นับป้ายนี้**
+         เดิมพาไป `?wait=<stage>` = "ใบที่ค้างขั้นนี้" เฉยๆ ⇒ เลขไม่ตรง + ปนใบที่กดอนุมัติไม่ได้ */
+      to: `/mtn-repair?tab=list&sign=${encodeURIComponent(g.stage)}`
         + (g.oldest != null ? `&from=${dayKeyBack(g.oldest, now)}` : ''),
     });
   });
