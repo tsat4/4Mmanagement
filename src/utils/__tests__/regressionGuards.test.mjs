@@ -13160,3 +13160,18 @@ test('🛡️ am-station-no-shim — ใบรวมสถานี AM ไม่
   assert.match(src, /const canShim = can\('fixture_shim', 'record', userRole\) && !shimAmReadOnly/,
     '\n\n❌ ใบ AM (ใบเดี่ยว) กรอก/บันทึกค่าชิมได้อีกแล้ว — ต้องดูได้อย่างเดียว (shimAmReadOnly = isAmTeam(department))\n');
 });
+
+/* 📈 สูตร SPC มีที่เดียว (26/11) — QA + SPC อุปกรณ์ (ใบ AM/PM · ค่าชิม) ใช้ computeSPC จาก src/utils/spcCalc.js
+   ก๊อปสูตรไปไว้ในหน้า = เส้นควบคุม/Cpk 2 ชุดคิดไม่ตรงกัน (เคยแก้บั๊ก subgroup ไม่เท่ากันที่ QA 20/08 — ชุดที่ก๊อปจะไม่ได้แก้ตาม) */
+test('🛡️ spc-single-formula — computeSPC / SPC_CONST ประกาศที่ src/utils/spcCalc.js เท่านั้น', () => {
+  const bad = [];
+  const walk = (d) => { for (const f of readdirSync(d)) { const p = join(d, f); const st = statSync(p);
+    if (st.isDirectory()) { if (f !== '__tests__') walk(p); continue }
+    if (!/\.(jsx?|mjs)$/.test(f)) continue;
+    const rel = relative(ROOT, p); if (rel === 'src/utils/spcCalc.js') continue;
+    const src = stripComments(readFileSync(p, 'utf8'));
+    if (/function\s+computeSPC\s*\(|const\s+SPC_CONST\s*=/.test(src)) bad.push(rel);
+  } };
+  walk(join(ROOT, 'src'));
+  assert.deepEqual(bad, [], '\n\n❌ มีสูตร SPC ชุดที่ 2 — import { computeSPC } from utils/spcCalc แทน\n');
+});
