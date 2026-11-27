@@ -112,7 +112,7 @@ import MachineRepairHistory from '../components/MachineRepairHistory';
 import { prPlacement, assignedTechsOf, joinTechs, prQueueStateOf, PR_QUEUE_META, PR_QUEUE_COLS } from '../utils/mtnPurchase';
 import { ioNoOf, buildIoIndex } from '../utils/moIoNo';   // 💳 "ใบนี้ลง I/O ไหน" ตอบที่เดียว (18/11)
 import { purgeMoQuotes } from '../lib/moQuotes';          // 🧾 ปิดใบสมบูรณ์ = ลบไฟล์ใบเสนอราคา (18/11)
-import { MACHINE_USABILITY, machineUsability, usabilityNeedsNote, usabilityPatch } from '../utils/machineUsability';   // 🔌 ปุ่มเปิด-ปิดเครื่อง (19/11)
+import { MACHINE_USABILITY, machineUsability, usabilityNeedsNote, usabilityNeedsAsk, usabilityPatch } from '../utils/machineUsability';   // 🔌 ปุ่มเปิด-ปิดเครื่อง (19/11)
 import { tr as trI18n } from '../utils/i18n';
 import { askConfirm } from '../utils/askConfirm';
 /* ตัวเลือกตัวกรองงาน PR — ลำดับตามขั้นงานจริงที่ทีม MTN เขียนมา (02/11):
@@ -2622,6 +2622,8 @@ function MachineUsabilityPanel({ order, machines, fullName, canEdit, affectedLin
   const [pick, setPick] = useState(null);     // สถานะที่กำลังจะเลือก (ยังไม่บันทึก)
   const [note, setNote] = useState('');
   const [busy, setBusy] = useState(false);
+  /* 🔴 hook ต้องอยู่เหนือ early return ทุกตัว (react-hooks/rules-of-hooks — ผิด = React #310 จอพังทั้งหน้า) */
+  const [openSet, setOpenSet] = useState(false);   // ไม่ทวง = ยุบปุ่มไว้ (ยังกดตั้งเองได้เสมอ)
   if (!order?.machine_no) return null;
   /* 🔴 ไม่เจอเครื่องในทะเบียน = เขียนบอก **ห้ามซ่อนแผงเงียบ** (คนพิมพ์เลขเครื่องเองได้) */
   if (!mc) {
@@ -2632,6 +2634,9 @@ function MachineUsabilityPanel({ order, machines, fullName, canEdit, affectedLin
     );
   }
   const u = machineUsability(mc, []);   // ในใบนี้สนใจแค่ "ช่างประกาศไว้ว่าอะไร"
+  /* ❓ ทวงให้กดยืนยันเฉพาะเคส "แก้ชั่วคราว รอของ" — เกณฑ์อยู่ `usabilityNeedsAsk()` ห้ามเขียนเองที่นี่
+     (27/11 · user: *"สเตปถึงรออนุมัติแล้ว ยังไม่แก้หรอ ที่จะขึ้นมาให้ยืนยันแค่เรื่องที่ซ่อมชั่วคราวรอ PR"*) */
+  const ask = usabilityNeedsAsk(u, { repairPath: order?.repair_path });
   const save = async () => {
     const patch = usabilityPatch(pick, note, fullName);
     if (!patch) return toast.error('เลือกสถานะแล้วพิมพ์เหตุผลด้วย (เหลือง/แดงต้องมีเหตุผล)');
@@ -2650,13 +2655,21 @@ function MachineUsabilityPanel({ order, machines, fullName, canEdit, affectedLin
         <span style={{ fontWeight: 700, color: (MACHINE_USABILITY.find(x => x.key === u.state) || {}).color }}>
           {trI18n((MACHINE_USABILITY.find(x => x.key === u.state) || {}).label)}
         </span>
-        {u.source === 'none' && <span style={{ fontSize: 11, color: 'var(--muted)' }}>{trI18n('(ยังไม่มีใครกดยืนยัน)')}</span>}
+        {/* 🔴 ขึ้นเฉพาะตอนที่ "ยังตอบจากใบไม่ได้จริง" — ใบที่ซ่อมจบรอแค่ลายเซ็น ไม่มีอะไรต้องประกาศ */}
+        {ask && <span style={{ fontSize: 11, color: 'var(--amber)' }}>{trI18n('— รอของมาเปลี่ยน: ช่วยกดยืนยันว่าเครื่องใช้งานได้แค่ไหน')}</span>}
         {affectedLines.length > 0 && (
           <span style={{ fontSize: 11, color: 'var(--amber)' }}>⚡ {trI18n('จ่าย')} {affectedLines.length} {trI18n('ไลน์')}</span>
         )}
       </div>
       {u.text && <div style={{ fontSize: 11.5, color: 'var(--text2)', marginTop: 3, lineHeight: 1.6 }}>{u.text}</div>}
-      {canEdit && (
+      {/* ไม่ทวง = ยุบไว้หลังลิงก์เล็กๆ — **ห้ามเอาปุ่มออก** ช่างต้องตั้งสถานะเองได้ทุกเมื่อ */}
+      {canEdit && !ask && !openSet && (
+        <button type="button" onClick={() => setOpenSet(true)}
+          style={{ ...btnGhost, padding: '3px 9px', fontSize: 11.5, marginTop: 6 }}>
+          {trI18n('🔌 ตั้งสถานะเครื่อง')}
+        </button>
+      )}
+      {canEdit && (ask || openSet) && (
         <>
           <div style={{ display: 'flex', gap: 6, marginTop: 6, flexWrap: 'wrap' }}>
             {MACHINE_USABILITY.map(x => (
