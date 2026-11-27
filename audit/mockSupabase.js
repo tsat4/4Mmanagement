@@ -1429,12 +1429,13 @@ const BENEFITS_DR = [
 const BENEFITS_ROLL = () => (benefitsCall++ % 2 === 0 ? BENEFITS_MAIN : BENEFITS_DR)
   .map(([kind, key, month_key, n, val]) => ({ kind, key, month_key, n, val }))
 
+/* 🔔 แจ้งเตือนที่ยังค้าง (27/11 · ห้ามถอด) — ค่าเริ่มของ rpc คืนแถวที่ไม่มี scope_name/message ⇒ การ์ดวาดกิ่ง "มีรายการ" ไม่ได้ */
+const ENERGY_OPEN_ALERTS = () => ([
+  { scope_name: 'DB-LASER', code: 'kw', level: 'warn', message: 'โหลดเกิน 137.0 kW (ลิมิต 123 kW)', ev_time: new Date(Date.now() - 3600000).toISOString() },
+  { scope_name: 'AC-06', code: 'offline', level: 'warn', message: 'ขาดการติดต่อ', ev_time: new Date(Date.now() - 7200000).toISOString() },
+])
 const RPC_RESULT = {
-  /* 🔔 แจ้งเตือนที่ยังค้าง (27/11 · ห้ามถอด) — ค่าเริ่มของ rpc คืนแถวที่ไม่มี scope_name/message ⇒ การ์ดวาดกิ่ง "มีรายการ" ไม่ได้ */
-  fn_energy_open_alerts: () => [
-    { scope_name: 'DB-LASER', code: 'kw', level: 'warn', message: 'โหลดเกิน 137.0 kW (ลิมิต 123 kW)', ev_time: new Date(Date.now() - 3600000).toISOString() },
-    { scope_name: 'AC-06', code: 'offline', level: 'warn', message: 'ขาดการติดต่อ', ev_time: new Date(Date.now() - 7200000).toISOString() },
-  ],
+  fn_energy_open_alerts: ENERGY_OPEN_ALERTS,
   esm_benefits_rollup: BENEFITS_ROLL,
   pm_usage_daily: PM_USAGE_DAILY,
   kpi_mtn_rollup: KPI_MTN_ROLL,
