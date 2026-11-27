@@ -23,7 +23,7 @@ import useScrollEdges from '../utils/useScrollEdges';   // ↔️ 18/11: มื�
 
 const IND_EASE = 'cubic-bezier(.4,1.2,.45,1)';
 
-export default function TabBar({ tabs, value, onChange, size, audit = false, className, style, right, scroller = false, after }) {
+export default function TabBar({ tabs, value, onChange, size, audit = false, className, style, right, scroller = false, after, arrows }) {
   const isMobile = useIsMobile();
   const { tr } = useLang();
   const tabList = (tabs || []).filter(Boolean);
@@ -114,7 +114,8 @@ export default function TabBar({ tabs, value, onChange, size, audit = false, cla
   /* 🖥️ scroller (จอคอม): แถวเดียวไม่ตัดบรรทัด · ล้นเมื่อไหร่ค่อยมีปุ่ม ◀ ▶ (ปุ่มที่สุดทางแล้ว = จาง กดไม่ได้)
      เส้นใต้ย้ายมาอยู่ที่กรอบนอก ⇒ ยาวเต็มแถวรวมปุ่ม · ป้ายแท็บไม่ถูกบีบ (ห้ามพับเข้า dropdown — กฎเดิม) */
   if (deskScroll) {
-    const over = edges.left || edges.right;
+    // `arrows="always"` (27/11 มาตรฐานกิจกรรม): ปุ่ม ◀ ▶ มีเสมอ — ไม่ล้น = จางกดไม่ได้ (ตำแหน่งไม่กระโดด)
+    const over = arrows === 'always' || edges.left || edges.right;
     const step = (dir) => { const sc = scrollRef.current; if (sc) sc.scrollBy({ left: dir * Math.max(120, sc.clientWidth * 0.7), behavior: prefersReduced() ? 'auto' : 'smooth' }); };
     const arrow = (dir, on) => (
       <button type="button" data-tab-scroll={dir < 0 ? 'left' : 'right'} onClick={() => step(dir)} disabled={!on}
