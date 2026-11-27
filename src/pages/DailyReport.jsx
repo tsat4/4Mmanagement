@@ -4126,10 +4126,13 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                   {/* 🔴 `alignItems:'stretch'` — เดิม `'flex-end'` = 2 ก้อนชิดล่างแล้ว **ขอบบนไม่ตรงกัน**
                       (ก้อนไหนเนื้อหาน้อยกว่าจะมีช่องว่างเหนือหัว · เห็นชัดเวลาหัวกะมีแบนเนอร์เตือน)
                       กฎ: การ์ดในแถวเดียวกันต้องสูงเท่ากัน (UI-CONVENTIONS §6.45) */}
+                  {/* 🪜 27/11 (user ชี้ "ตรงนี้ยังเป็นสเต็ป"): หัวข้อ "ภาพรวมทั้งกะ" อยู่เหนือทั้งแถว ไม่ใช่ในคอลัมน์การ์ด
+                      — เดิมอยู่ในคอลัมน์ซ้าย ⇒ การ์ด KPI เริ่มต่ำกว่ากล่องหัวกะ 1 บรรทัด ขอบบนไม่ตรงกัน (§6.45) · มือถือโครงเดิม */}
+                  {!isMobile && overviewTitle}
                   <div style={isMobile ? undefined : { display: 'flex', flexDirection: 'row-reverse', flexWrap: 'wrap', justifyContent: 'flex-end', alignItems: 'stretch', gap: 16, marginBottom: 10 }}>
                   {!isMobile && <div style={{ flex: '1 1 420px', minWidth: 0 }}>{sessionHeaderEl}</div>}
                   <div style={isMobile ? undefined : { flex: '0 0 auto', display: 'flex', flexDirection: 'column' }}>
-                  {overviewTitle}
+                  {isMobile && overviewTitle}
                   {/* 📊 การ์ดโครงเดียว (KpiTile · UI §6.35) — เดิม 7 ใบ 5 สี ⇒ 5 ใบ ตัวเลขสีเดียว ข้อมูลเดิมครบ
                       (เป้ารวม → บรรทัดใต้ "ผลิตได้" · เปิด/ปิดแล้ว → "ใบผลิต" · นอกแผน → บรรทัดใต้ "Downtime") */}
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(auto-fit,minmax(150px,1fr))' : 'repeat(4, 160px)', gap: 10, marginBottom: isMobile ? 16 : 0,
