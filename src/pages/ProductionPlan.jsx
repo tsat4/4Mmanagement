@@ -671,7 +671,7 @@ export default function ProductionPlan() {
   const confChip = (c) => c === 'high' ? null : <span style={chip(c === 'med' ? 'var(--amber)' : 'var(--red)')}>{c === 'med' ? tr('ข้อมูลปานกลาง') : tr('ข้อมูลน้อย')}</span>;
 
   return (
-    <Page style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+    <Page top="flush" style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
       <PageHeader
         title={tr('วางแผนการผลิต')} icon="🗓️"
         tabs={PRODUCTION_PLAN_TABS /* ทะเบียนกลาง navSubTabs.js (24/11) */}

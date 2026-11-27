@@ -13236,3 +13236,53 @@ test('🛡️ spc-single-formula — computeSPC / SPC_CONST ประกาศ�
   walk(join(ROOT, 'src'));
   assert.deepEqual(bad, [], '\n\n❌ มีสูตร SPC ชุดที่ 2 — import { computeSPC } from utils/spcCalc แทน\n');
 });
+
+test('🔌 usability-ask-only-pending-parts — ทวงยืนยันสถานะเครื่องเฉพาะเคส "รอของมาเปลี่ยน"', () => {
+  /* 27/11 · user: "ทำไมยังต้องมีให้กดยืนยัน เคสแบบนี้สเตปถึงรออนุมัติแล้ว ยังไม่แก้หรอ
+     ที่จะขึ้นมาให้ยืนยันแค่เรื่องที่ซ่อมชั่วคราวรอ PR"
+     ของเดิมขึ้น "(ยังไม่มีใครกดยืนยัน)" ทุกใบทุกขั้น ⇒ ใบที่ซ่อมจบรอแค่ลายเซ็นก็ยังทวง
+     = ทวงจนคนเลิกสนใจ (คลาสเดียวกับกระดิ่งท่วม)
+     🔴 เกณฑ์อยู่ `usabilityNeedsAsk()` ที่เดียว · หน้าห้ามเทียบ repair_path / source เอง
+     🔴 "ไม่ทวง" ต้องไม่ใช่ "เอาปุ่มออก" — ช่างต้องตั้งสถานะเองได้ทุกเมื่อ */
+  const util = readFileSync(join(ROOT, 'src/utils/machineUsability.js'), 'utf8');
+  assert.match(util, /export function usabilityNeedsAsk\(/,
+    '\n\n❌ ไม่มี usabilityNeedsAsk() ใน utils/machineUsability.js\n');
+  assert.ok(/source === 'declared'\) return false/.test(util),
+    '\n\n❌ usabilityNeedsAsk ไม่ได้กัน "ประกาศไว้แล้ว = ไม่ทวง"\n');
+  assert.ok(/repairPathMeta\(repairPath\)\?\.needsPr/.test(util),
+    '\n\n❌ usabilityNeedsAsk ไม่ได้ผูกกับทะเบียนเส้นทางซ่อม (needsPr) — ห้ามเทียบคีย์เส้นทางเอง\n');
+
+  const page = stripComments(readFileSync(join(ROOT, 'src/pages/MtnRepair.jsx'), 'utf8'));
+  assert.ok(/usabilityNeedsAsk\(/.test(page),
+    '\n\n❌ MtnRepair.jsx ไม่ได้ถาม usabilityNeedsAsk() — กลับไปทวงทุกใบแล้ว\n');
+  assert.ok(/ยังไม่มีใครกดยืนยัน/.test(page) === false,
+    '\n\n❌ MtnRepair.jsx ยังมีป้าย "(ยังไม่มีใครกดยืนยัน)" แบบขึ้นทุกใบ\n');
+  assert.ok(/!ask && !openSet/.test(page),
+    '\n\n❌ ไม่มีทางยุบปุ่มตั้งสถานะไว้ (หรือเอาปุ่มออกไปเลย)\n'
+    + '   ไม่ทวง ≠ ปิดปุ่ม — ช่างต้องตั้งสถานะเองได้ทุกเมื่อ\n');
+});
+
+test('✍️ sign-queue-single-rule — ป้าย "รอคุณเซ็น" กับลิสต์ที่ป้ายพาไป ต้องใช้กฎเดียวกัน', () => {
+  /* 27/11 · หน้างานแจ้ง: "ทำไมแจ้งเตือนงานที่รออนุมัติ พอกดเข้ามายังเจองานที่ยังติด loop PR อยู่
+     มันยังอนุมัติไม่ได้นิ"
+     ป้ายนับถูกแล้ว (ตัดใบติดลูป PR ออกตั้งแต่ 23/11) แต่ลิงก์พาไป `?wait=<stage>`
+     = "ใบที่ค้างขั้นนี้" เฉยๆ ⇒ ไม่รู้จักทั้งกฎ "รอเราจริง" และกฎ PR ⇒ ป้ายบอก 4 เจอ 14
+     คลาสเดียวกับ ack-queue-single-rule (23/11) เป๊ะ */
+  const q = readFileSync(join(ROOT, 'src/utils/myQueue.js'), 'utf8');
+  assert.match(q, /export function signWaitsOnMe\(/,
+    '\n\n❌ ไม่มี signWaitsOnMe() ใน utils/myQueue.js — กฎ "ใบนี้รอเราเซ็นไหม" ไม่มีเจ้าของ\n');
+  assert.ok(/signWaitsOnMe\(o, me, src\.prOf/.test(q),
+    '\n\n❌ ตัวนับป้ายในคิวไม่ได้ใช้ signWaitsOnMe() — กลับไปเขียนเงื่อนไขซ้ำแล้ว\n');
+  assert.ok(/to: `\/mtn-repair\?tab=list&sign=/.test(q),
+    '\n\n❌ ลิงก์ของป้าย "รอคุณเซ็น" ไม่ได้ชี้ `?sign=<stage>`\n'
+    + '   ชี้ `?wait=` = "ใบที่ค้างขั้นนี้" ซึ่งไม่รู้จักกฎรอเราจริง/กฎ PR ⇒ เลขไม่ตรงป้ายอีกรอบ\n');
+
+  const page = stripComments(readFileSync(join(ROOT, 'src/pages/MtnRepair.jsx'), 'utf8'));
+  assert.ok(/signWaitsOnMe\(o, signMe/.test(page),
+    '\n\n❌ ตัวกรอง `?sign=` ในหน้า MO ไม่ได้ใช้ signWaitsOnMe()\n');
+  assert.ok(/actorSide: actorSideOf\(/.test(page) && /posRank: positionRank\(/.test(page),
+    '\n\n❌ ctx ของตัวกรอง `?sign=` ขาด actorSide / posRank\n'
+    + '   soleSignerFor() จะคืน false ทุกแถว (ไม่รู้ฝั่ง/ตำแหน่ง = ไม่นับ) ⇒ จอว่างเปล่าโดยไม่มีอะไรบอก\n');
+  assert.ok(/prsForLabel\(o\), fSign\)/.test(page),
+    '\n\n❌ ตัวกรอง `?sign=` ไม่ได้ส่งใบขอซื้อ (prsForLabel) ⇒ ใบที่ติดลูป PR จะปนกลับมาอีก\n');
+});

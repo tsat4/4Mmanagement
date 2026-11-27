@@ -1,8 +1,9 @@
 import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react';
 import { MoreMark } from './InfoMore';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { NAV_ITEMS, STICKY_TAB_GROUPS, FULL_STICKY_GROUPS, inNavGroup } from '../App';
-import { useNavSubItemsStore } from '../utils/navSubItems';   // 🗂️ Detail Bar = รายการที่หน้าประกาศตอนรัน (พื้นที่ SAP)
+import { NAV_ITEMS, STICKY_TAB_GROUPS, FULL_STICKY_GROUPS, STD_LAYOUT_GROUPS, inNavGroup } from '../App';
+import { useNavSubItemsStore } from '../utils/navSubItems';
+import { publishNavTabs } from '../utils/navTabsLive';   // 🗂️ 27/11 แท็บของทุกหน้า → ข้อย่อยในแผงเมนู   // 🗂️ Detail Bar = รายการที่หน้าประกาศตอนรัน (พื้นที่ SAP)
 import { useMergeParams } from '../utils/useTabParam';
 import { NAV_SUB_TABS } from '../utils/navSubTabs';   // 🗂️ 24/11 หน้าที่แท็บย้ายไปเป็นข้อย่อยในแผงเมนู
 import useIsMobile from '../utils/useIsMobile';
@@ -167,7 +168,7 @@ const TOOL_TONE = { add: 'var(--green)', edit: 'var(--amber)', delete: 'var(--re
 const TOOL_DIM  = { add: 'var(--green-dim)', edit: 'var(--amber-dim)', delete: 'var(--red-dim)' };
 const TOOL_GLYPH = { refresh: '🔄', search: '🔍', export: '📤', import: '📥', add: '➕', edit: '📝', delete: '🗑️' };
 /* 📱 มือถือ (25/11 "เหมือนจอคอม"): ปุ่มเหลือไอคอน (ป้ายเต็มอยู่ใน title/aria-label) — ไม่งั้น 4 ปุ่มกินทั้งแถวจน Detail Bar เหลือ 0 */
-function ToolBar({ tools, iconOnly = false, full = false }) {
+function ToolBar({ tools, iconOnly = false, full = false, searchSlot = null }) {
   const { tr } = useLang();
   const byKey = Object.fromEntries(tools.map(t => [t.key, t]));
   const list = full
@@ -175,7 +176,7 @@ function ToolBar({ tools, iconOnly = false, full = false }) {
     : [...tools].sort((a, b) => TOOL_ORDER.indexOf(a.key) - TOOL_ORDER.indexOf(b.key));
   return (
     <span data-ph="toolbar" style={{ display: 'inline-flex', alignItems: 'center', gap: 6, flexShrink: 0, marginLeft: 8 }}>
-      {list.map(t => (
+      {list.map(t => (t.key === 'search' && !byKey.search && searchSlot) ? <span key="search" data-tool="search" style={{ display: 'inline-flex' }}>{searchSlot}</span> : (
         <button key={t.key} type="button" data-tool={t.key} onClick={t.disabled ? undefined : t.onClick} disabled={!!t.disabled}
           title={tr(t.label || TOOL_LABEL[t.key]) + (t.disabled && t.why ? ` — ${tr(t.why)}` : '')} aria-label={tr(t.label || TOOL_LABEL[t.key])}
           style={{ height: 30, padding: iconOnly ? '0 8px' : '0 12px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', borderRadius: 'var(--r-md)', fontSize: 13, fontWeight: 600, cursor: t.disabled ? 'default' : 'pointer',
@@ -193,12 +194,12 @@ export default function PageHeader({
   /* 📐 `layout="std"` (27/11 · ต้นแบบมาตรฐานบนหน้ากิจกรรม — รอ user เคาะรูปก่อนกวาดทั้งระบบ · UI §0.1)
      Header ชิดบน (คู่กับ <Page top="flush">) → Detail Bar แถวเดียว ◀ ▶ มีเสมอ + Tool Bar 7 ปุ่มขวา → การ์ด
      · แท็บของหน้า (Dashboard/Edit Data/Setting) เปลี่ยนที่ Sub bar ⇒ ไม่วาดแถบแท็บในหน้า (ต้องมีใน `NAV_SUB_TABS` ไม่งั้นวาดตามเดิม) */
-  const std = layout === 'std';
+  const stdExplicit = layout === 'std';
   const isMobile = useIsMobile();
   const { tr } = useLang();
   const inHub = useContext(HubContext);   // หน้าลูกใน hub → ไม่วาดชื่อหน้า/breadcrumb ซ้ำ (Page.jsx)
   const { pathname, search } = useLocation();
-  const tabsViaMenu = std && !!NAV_SUB_TABS[pathname];   // std: แท็บเปลี่ยนที่ Sub bar (มีทางเข้าแน่นอน)
+  const tabsViaMenu = stdExplicit && !!NAV_SUB_TABS[pathname];   // `layout="std"` ที่หน้าส่งเอง (กิจกรรม): แท็บเปลี่ยนที่ Sub bar · std ตามหมวด = แท็บยังอยู่ในหน้า
   const navigate = useNavigate();
   const navItem = NAV_ITEMS.find(n => n.to === pathname);
   const rawTabs = (tabs || []).filter(Boolean);
@@ -213,6 +214,7 @@ export default function PageHeader({
   const topValue = activeGroup ? `grp:${activeGroup.key}` : tab;
   const onTop = (k) => { const g = String(k).startsWith('grp:') && rawTabs.find(t => Array.isArray(t.children) && `grp:${t.key}` === k); onTab && onTab(g ? g.children[0].key : k); };
   const tabList = topTabs;
+  const tabsInPage = !!tabList.length && !tabsViaMenu;   // แถบแท็บวาดในหน้าไหม
   /* 📌 Detail bar ตรึงบน (24/11 · คำสั่ง user "ข้อมูลเยอะ สไลด์ขึ้นลงใช้เวลาหานาน") — เฉพาะหน้าในหมวด `STICKY_TAB_GROUPS` (App.jsx)
      · จอคอมเท่านั้น · หน้าเดี่ยวที่มีแท็บ และไม่มี `filters=` (ให้ค้างแค่แถบแท็บ ตามที่ user เลือก)
      · วิธี: ก้อนหัวเพจทั้งก้อนเป็น sticky แต่ `top` ติดลบเท่าความสูงส่วนเหนือแถบแท็บ ⇒ breadcrumb/ชื่อหน้าเลื่อนหายไป เหลือแท็บติดขอบบน
@@ -227,6 +229,9 @@ export default function PageHeader({
      ได้หัวเพจกะทัดรัดบนมือถือด้วย · หน้าอื่นบนมือถือยังไม่แตะ (ขอบเขตที่ user สั่ง) */
   const compact = !inHub && !!navItem && (!isMobile || inNavGroup(navItem, STICKY_TAB_GROUPS));
   const compactSticky = compact && !filters;
+  /* 📐 std ตามหมวด (27/11 · `STD_LAYOUT_GROUPS`) — แท็บเดิมของหน้า = Detail Bar (แถวเดียว ◀ ▶ มีเสมอ) + Tool Bar 7 ปุ่มชิดขวา
+     ปุ่ม 🔍 ของ Tool Bar = ค้นหาในแท็บที่เปิดอยู่ (`HeaderSearch` ตัวเดิม) เมื่อหน้าไม่ได้ส่งปุ่มค้นหาเอง · ปุ่มอื่นที่หน้าไม่ส่ง = จาง */
+  const std = stdExplicit || (compactSticky && inNavGroup(navItem, STD_LAYOUT_GROUPS));
   /* 🗂️ 26/11 (คำสั่ง user "แท็บอยู่ในหน้า · เมนูเป็นทางเข้า") — หน้าที่อยู่ในทะเบียน `NAV_SUB_TABS` **ยังวาดแถบแท็บในหน้าเสมอ**
      ข้อย่อยในแผงเมนูเป็น *ทางลัด* เข้าแท็บ (กดจากที่อื่นแล้วตกถึงแท็บนั้นเลย) ไม่ใช่ตัวสลับแท็บ
      — รอบ 24/11 เคยซ่อนแถบแท็บของหน้าพวกนี้ ⇒ สลับแท็บต้องเปิดแผง 2–3 คลิก และคนไม่เห็นว่าหน้านี้มีแท็บอะไรอีก (ถอดแล้ว · ด่าน `tabs-stay-in-page`) */
@@ -234,6 +239,10 @@ export default function PageHeader({
      รายการมาจากหน้า (`useNavSubItems(path, tab, query, items)` — ข้อมูลจริงของแท็บนั้น ไม่เดา) · กด = ตั้ง `?<query>=` (ตัวกรองเดียวกับช่องบนจอ)
      · ตอนนี้มีเฉพาะแท็บที่จัดกลุ่มตามพื้นที่ SAP (user เลือก "แสดงเฉพาะหน้าที่มีพื้นที่ SAP") · ไม่มีรายการ = ไม่วาดแถบ
      · แถวเดียว + ◀ ▶ เมื่อล้น (`TabBar scroller`) · ตรึงบนตอนเลื่อนจอ + ปุ่ม 🔍 ท้ายแถบ */
+  /* 🗂️ 27/11 (คำสั่ง user "เมนูย่อยใน sidebar ยังมีแค่ของสโตร์"): หน้าเดี่ยวที่มีแท็บประกาศแท็บให้แผงเมนูวาดเป็นข้อย่อย (ทางลัด ?tab=)
+     ทำที่ของกลางจุดเดียว — หน้าไม่ต้องขึ้นทะเบียน · hub/หน้าลูกใน hub ไม่ประกาศ (แท็บชั้นใน ไม่ใช่ของเมนู) */
+  const tabSig = topTabs.map(t => `${t.key}\u0001${t.label}`).join('\u0002');
+  useEffect(() => { if (!inHub && navItem && topTabs.length) publishNavTabs(pathname, rawTabs); }, [inHub, !!navItem, pathname, tabSig]);   // eslint-disable-line react-hooks/exhaustive-deps
   const navLive = useNavSubItemsStore();
   const setUrl = useMergeParams();
   const detail = compactSticky ? (navLive[`${pathname}|${tab ?? ''}`] || null) : null;
@@ -249,8 +258,8 @@ export default function PageHeader({
   /* 🧰 Tool Bar (25/11) — ปุ่มคำสั่งชุดมาตรฐาน ตำแหน่งตายตัวขวาสุดของแถว Detail Bar (ลำดับ ค้นหา · เพิ่ม · แก้ไข · ลบ)
      · หน้าส่ง `tools=[{ key:'search'|'add'|'edit'|'delete', label, onClick, disabled }]` · ไม่ส่ง = ไม่มี (ปุ่ม 🔍 แบบเดิม)
      · ลำดับเรียงตาม `TOOL_ORDER` เสมอ ไม่ว่าหน้าส่งมาลำดับไหน (ผู้ใช้จำตำแหน่งได้ — คำสั่ง user) */
-  const toolBar = compactSticky && ((tools && tools.length) || std) ? <ToolBar tools={tools || []} iconOnly={isMobile || std} full={std} /> : null;   // std (27/11 คำสั่ง user): ไอคอนทุกขนาดจอ · ชี้ค้าง = ชื่อปุ่ม (title)
   const rootRef = useRef(null);
+  const toolBar = compactSticky && ((tools && tools.length) || std) ? <ToolBar tools={tools || []} iconOnly={isMobile || std} full={std} searchSlot={std ? <HeaderSearch rootRef={rootRef} tabKey={String(tab ?? '')} /> : null} /> : null;   // std (27/11 คำสั่ง user): ไอคอนทุกขนาดจอ · ชี้ค้าง = ชื่อปุ่ม (title)
   const [stickTop, setStickTop] = useState(0);
   useLayoutEffect(() => {
     if (!sticky) return undefined;
@@ -272,7 +281,12 @@ export default function PageHeader({
     <>
       {/* 24/11: โหมดกะทัดรัด = แถวเดียว + ปุ่ม ◀ ▶ เมื่อล้น + ปุ่มค้นหาท้ายแถบ */}
       <TabBar className="ph-chrome" tabs={topTabs} value={topValue} onChange={onTop} audit
-        {...(compact ? { scroller: true, ...(sticky ? { after: <HeaderSearch rootRef={rootRef} tabKey={String(tab)} /> } : null) } : null)} />
+        {...(compact ? { scroller: true, ...(std ? { arrows: 'always', ...(isMobile ? null : { after: toolBar }) }
+          : (sticky ? { after: <HeaderSearch rootRef={rootRef} tabKey={String(tab)} /> } : null)) } : null)} />
+      {/* 📱 std บนมือถือ: Tool Bar ลงแถวถัดไปชิดขวา (แถวเดียวกับแท็บ = แท็บเหลือกว้าง 0) */}
+      {std && isMobile && toolBar && (
+        <div data-ph="toolbar-row" className="ph-chrome" style={{ display: 'flex', justifyContent: 'flex-end', marginTop: -4 }}>{toolBar}</div>
+      )}
       {activeGroup && (
         <div data-subtab="1" className="ph-chrome" style={{ marginTop: -4 }}>
           <TabBar size="sm" tabs={activeGroup.children} value={tab} onChange={onTab} />
@@ -331,6 +345,22 @@ export default function PageHeader({
         </div>
   ) : null;
 
+  /* 📍 แถว Detail Bar รายการพื้นที่ (SAP) — std + แท็บในหน้า = แถวที่ 2 ใต้แท็บ (ไม่ถือ Tool Bar) */
+  const detailRow = detailItems ? (
+      <div data-detailbar="1" className="ph-chrome">
+        <TabBar scroller
+          tabs={[...(detail.all ? [{ key: '__all', label: tr('ทั้งหมด') }] : []), ...detailItems.map(it => ({ key: String(it.key), label: it.label, title: it.label }))]}
+          value={detailCur || (detail.all ? '__all' : String(detailItems[0].key))}
+          onChange={(k) => setUrl({ [detail.query]: k === '__all' ? null : k }, { replace: true })}
+          arrows={std ? 'always' : undefined}
+          after={(std && (isMobile || tabsInPage)) ? undefined : (toolBar || <HeaderSearch rootRef={rootRef} tabKey={String(tab ?? '')} />)} />
+        {/* 📱 std บนมือถือ: Tool Bar 7 ปุ่มไม่พอที่ในแถวเดียวกับ Detail Bar (Detail Bar เหลือกว้าง 0) ⇒ ลงแถวถัดไปชิดขวา ลำดับปุ่มเดิม */}
+        {std && isMobile && !tabsInPage && toolBar && (
+          <div data-ph="toolbar-row" style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 6 }}>{toolBar}</div>
+        )}
+      </div>
+  ) : null;
+
   return (
     /* `data-ph-root` = ก้อนหัวเพจทั้งก้อน (ชื่อ + คำอธิบาย + แถบแท็บ + filters/actions ของหัว)
        🔴 ตัวตรวจลำดับ (`audit/stdsweep.mjs`) ต้องวัด "ก้นของก้อนนี้" ไม่ใช่ก้นของ `h1`
@@ -375,28 +405,24 @@ export default function PageHeader({
       {compact && crumbs}
 
       {/* 📍 Detail Bar — ใต้ breadcrumb (ดูคอมเมนต์ `detail` ข้างบน) · "ทั้งหมด" = ล้างตัวกรอง */}
-      {emptyDetailRow && (
+      {emptyDetailRow && std && (
+        /* std: แถวว่างก็มี ◀ ▶ (จาง) + Tool Bar ตำแหน่งเดียวกับหน้าที่มีแท็บ */
+        <div data-detailbar="1" className="ph-chrome">
+          <TabBar scroller arrows="always" tabs={[]} value={null} onChange={() => {}} after={isMobile ? undefined : toolBar} />
+          {isMobile && toolBar && <div data-ph="toolbar-row" style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 6 }}>{toolBar}</div>}
+        </div>
+      )}
+      {emptyDetailRow && !std && (
         <div data-detailbar="1" className="ph-chrome" style={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end',
           minHeight: 36, paddingBottom: 2, borderBottom: '1px solid var(--border)' }}>
           {toolBar || <HeaderSearch rootRef={rootRef} tabKey={String(tab ?? '')} />}
         </div>
       )}
-      {detailItems && (
-        <div data-detailbar="1" className="ph-chrome">
-          <TabBar scroller
-            tabs={[...(detail.all ? [{ key: '__all', label: tr('ทั้งหมด') }] : []), ...detailItems.map(it => ({ key: String(it.key), label: it.label, title: it.label }))]}
-            value={detailCur || (detail.all ? '__all' : String(detailItems[0].key))}
-            onChange={(k) => setUrl({ [detail.query]: k === '__all' ? null : k }, { replace: true })}
-            arrows={std ? 'always' : undefined}
-            after={(std && isMobile) ? undefined : (toolBar || <HeaderSearch rootRef={rootRef} tabKey={String(tab ?? '')} />)} />
-          {/* 📱 std บนมือถือ: Tool Bar 7 ปุ่มไม่พอที่ในแถวเดียวกับ Detail Bar (Detail Bar เหลือกว้าง 0) ⇒ ลงแถวถัดไปชิดขวา ลำดับปุ่มเดิม */}
-          {std && isMobile && toolBar && (
-            <div data-ph="toolbar-row" style={{ display: 'flex', justifyContent: 'flex-end', paddingTop: 6 }}>{toolBar}</div>
-          )}
-        </div>
-      )}
+      {detailItems && !(std && tabsInPage) && detailRow}
 
-      {!!tabList.length && !tabsViaMenu && renderTabs()}
+      {tabsInPage && renderTabs()}
+      {/* 📐 std + แท็บอยู่ในหน้า (27/11): แท็บ = Detail Bar แถวแรก (ถือ Tool Bar) · รายการพื้นที่ SAP ตามมาเป็นแถวที่ 2 */}
+      {detailItems && std && tabsInPage && detailRow}
 
       {/* ── ลำดับแนวตั้งตายตัวทุกหน้า: breadcrumb → ชื่อหน้า|ปุ่มคำสั่ง → แท็บ → แถบกรอง → เนื้อหา ──
           (user 24/09: "ลำดับยังโดดไปมา เดี๋ยวแท็บมาก่อนช่องค้นหา บางหน้าค้นหาอยู่บนสุดก่อนแท็บ") */}

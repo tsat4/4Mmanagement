@@ -130,9 +130,10 @@ export default function StoreMonitor() {
   const nLate = scoped.filter(f => f.code === 'C').length;
 
   return (
-    <Page>
+    <Page top="flush">
       <PageHeader title={tr('เฝ้าระวังสต๊อก & รอบส่ง (Abnormality Monitor)')} icon="🚨"
-        sub={tr('จับความผิดปกติของสต๊อก/รอบส่ง แล้วสรุปเป็น จะขาด / ล้น (แนวคิด TEI-TEI ของ Toyota)')} />
+        sub={tr('จับความผิดปกติของสต๊อก/รอบส่ง แล้วสรุปเป็น จะขาด / ล้น (แนวคิด TEI-TEI ของ Toyota)')}
+        tools={[{ key: 'refresh', label: 'รีเฟรช', onClick: () => load() }]}   /* Tool Bar มาตรฐาน (27/11) */ />
 
 
       {/* UI-STANDARD 2026-09-24 — ไลน์ (ขอบเขต) ก่อน → ชนิดเรื่อง (Segmented) */}

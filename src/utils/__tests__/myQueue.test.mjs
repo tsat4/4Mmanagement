@@ -497,7 +497,7 @@ const closeRow = (id, d) => ({
   line_name: 'LASER-345', mtn_dept: 'production', work_date: d,
 });
 
-test('✍️ ใบรอเราเซ็น ≥2 ใบ ⇒ มีบรรทัดสรุปบนสุด + ลิงก์กรอง ?wait=', () => {
+test('✍️ ใบรอเราเซ็น ≥2 ใบ ⇒ มีบรรทัดสรุปบนสุด + ลิงก์กรอง ?sign=', () => {
   const q = buildQueue({
     mo: [closeRow('a', '2026-09-20'), closeRow('b', '2026-09-22'), closeRow('c', '2026-09-24')],
     sessions: [], fourM: [], actions: [], bins: [], summaries: [],
@@ -505,7 +505,10 @@ test('✍️ ใบรอเราเซ็น ≥2 ใบ ⇒ มีบรร�
   const top = q.mine[0];
   assert.ok(top?.rollup, 'บรรทัดสรุปต้องอยู่บนสุดของชั้น mine');
   assert.match(top.title, /รอคุณเซ็น 3 ใบ/);
-  assert.match(top.to, /\/mtn-repair\?tab=list&wait=close/, 'ต้องพาไปหน้า MO ที่กรองขั้นที่รอเราแล้ว');
+  /* 🔴 27/11 — ต้องเป็น `?sign=` ไม่ใช่ `?wait=`
+     `?wait=<stage>` = "ใบที่ค้างขั้นนี้" เฉยๆ (ไม่รู้จักกฎ "รอเราจริง" และกฎลูป PR)
+     ⇒ หน้างานแจ้ง: ป้ายบอก 4 ใบ กดเข้าไปเจอ 14 ปนใบที่กดอนุมัติไม่ได้ */
+  assert.match(top.to, /\/mtn-repair\?tab=list&sign=close/, 'ต้องพาไปตัวกรองที่ใช้กฎเดียวกับป้าย');
   assert.match(top.to, /&from=/, 'ต้องถอยขอบวันที่ให้ครอบใบเก่าสุด ไม่งั้นตัวกรอง default ซ่อนใบค้าง');
   // 🔴 badge นับ "ใบ" จริง ไม่บวกบรรทัดสรุปเข้าไปอีก
   assert.equal(q.counts.mine, 3, 'counts.mine ต้องเท่าจำนวนใบ ไม่นับ rollup');

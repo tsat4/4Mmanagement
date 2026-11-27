@@ -7,6 +7,8 @@
       secrets: INGEST_SECRET (ต้องตรงกับฝั่ง bridge) · SUPABASE_URL · SUPABASE_SERVICE_ROLE_KEY
 
    สายงาน: MQTT → bridge (สรุป 15 นาที) → ที่นี่ → energy_live / energy_topic_unmapped
+   v11 (2026-11-27 · คำสั่ง user "ทำทุกข้อ"): แรงดันรายเฟส v1-v3 เข้าประวัติรายนาทีด้วย (energy_readings.v1-v3 · กราฟแยก 3 เฟส)
+     · กระแสรายเฟส a1-a3 ยังเก็บแค่ค่าล่าสุด (ยังไม่มีจอใช้ — ห้ามเก็บเผื่อ)
    v10 (2026-11-23 · คำสั่ง user "ล่าสุด + เก็บค่าสูงสุดแยก"): kW/A ที่โชว์ = **ค่าล่าสุด** (`last` · ตรงจอ Node-RED)
      · `max` ของรอบ (โหลดกระชาก) → energy_readings.kw_max / a_max (peak รายวันใช้ coalesce(kw_max, kw) — trigger)
      · ไม่ส่ง `last` มา = ใช้ `max` แทนเหมือนเดิม · ไม่ส่ง `max` = kw_max ว่าง = พฤติกรรมเดิม
@@ -33,7 +35,7 @@ import { createClient } from 'jsr:@supabase/supabase-js@2';
 
 const UNIT: Record<string, string> = { kw: 'kW', kwh_total: 'kWh', v: 'V', a: 'A' };
 /** ค่าที่เก็บเป็นประวัติรายนาที (energy_readings) — ต้องตรงกับคอลัมน์ของตาราง */
-const HIST_FIELDS = ['kw', 'kwh_total', 'v', 'a'];
+const HIST_FIELDS = ['kw', 'kwh_total', 'v', 'a', 'v1', 'v2', 'v3'];   // v11: + แรงดันรายเฟส (กราฟ 3 เฟสหน้าประวัติ)
 /** ค่ารายเฟส (ค่าล่าสุดอย่างเดียว ไม่เก็บประวัติ) — ตู้ตามพี่น้องที่ผูก topic แล้ว */
 const PHASE_FIELDS = ['v1', 'v2', 'v3', 'a1', 'a2', 'a3'];
 /** เก็บประวัติรายนาทีไว้กี่วัน (ยอดระยะยาวอยู่ energy_daily ที่ trigger สรุปไว้แล้ว) */
