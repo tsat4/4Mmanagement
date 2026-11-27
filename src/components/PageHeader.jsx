@@ -249,7 +249,7 @@ export default function PageHeader({
   /* 🧰 Tool Bar (25/11) — ปุ่มคำสั่งชุดมาตรฐาน ตำแหน่งตายตัวขวาสุดของแถว Detail Bar (ลำดับ ค้นหา · เพิ่ม · แก้ไข · ลบ)
      · หน้าส่ง `tools=[{ key:'search'|'add'|'edit'|'delete', label, onClick, disabled }]` · ไม่ส่ง = ไม่มี (ปุ่ม 🔍 แบบเดิม)
      · ลำดับเรียงตาม `TOOL_ORDER` เสมอ ไม่ว่าหน้าส่งมาลำดับไหน (ผู้ใช้จำตำแหน่งได้ — คำสั่ง user) */
-  const toolBar = compactSticky && ((tools && tools.length) || std) ? <ToolBar tools={tools || []} iconOnly={isMobile} full={std} /> : null;
+  const toolBar = compactSticky && ((tools && tools.length) || std) ? <ToolBar tools={tools || []} iconOnly={isMobile || std} full={std} /> : null;   // std (27/11 คำสั่ง user): ไอคอนทุกขนาดจอ · ชี้ค้าง = ชื่อปุ่ม (title)
   const rootRef = useRef(null);
   const [stickTop, setStickTop] = useState(0);
   useLayoutEffect(() => {
