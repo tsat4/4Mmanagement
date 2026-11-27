@@ -1323,3 +1323,6 @@ body.esm-tv-shell .tv-hide { display: none !important; }
 /* 🗂 TabBar `scroller` (จอคอม · 24/11): แถบแท็บแถวเดียวเลื่อนด้วยปุ่ม ◀ ▶ — ซ่อนแถบเลื่อนของกล่อง (ปุ่มบอกทางแทนแล้ว) */
 .tabbar-scroller { scrollbar-width: none; }
 .tabbar-scroller::-webkit-scrollbar { display: none; }
+
+/* 📐 <Page top="flush"> (27/11 · มาตรฐานหน้ากิจกรรม) — หัวเพจตรงแถวบนสุดของ Main bar · จอคอมเท่านั้น */
+@media (min-width: 769px) { .page-content.page-flush-top { padding-top: 10px; } }

@@ -16,7 +16,7 @@ import {
   Lock, KeyRound, Bell, Link, Wrench, Bolt, Sparkles, Archive, Database, CalendarDays, Anvil, Map, Rocket, Truck,
   Siren, Hammer, UsersRound, Compass, Toolbox, Gamepad2, Camera, FolderOpen, Shield, ShieldCheck, PenLine, Globe,
   Drama, MessageSquare, BellOff, LogOut, Folder, Menu, QrCode, ClipboardCheck, Star, UserRound, Plug,
-  Pin, PanelLeftClose, FlaskConical, UserRoundCheck, Target, ArrowUp, Undo2, Handshake, Upload, Flag, Receipt, Hand,
+  Pin, PanelLeftClose, FlaskConical, UserRoundCheck, Target, ArrowUp, Undo2, Handshake, Upload, Flag, Receipt, Hand, Trash2, Download,
 } from 'lucide-react';
 
 export const ICON_MAP = {
@@ -31,6 +31,8 @@ export const ICON_MAP = {
   '🗂️': FolderOpen, '🛡️': Shield, '🦺': ShieldCheck, '✍️': PenLine, '🌐': Globe, '🎭': Drama, '💬': MessageSquare,
   '🔕': BellOff, '🚪': LogOut, '📁': Folder, '☰': Menu, '🔳': QrCode, '☑️': ClipboardCheck, '⭐': Star, '👤': UserRound,
   '🎯': Target,   // 25/11 หมวดกิจกรรม (Target import อยู่แล้ว)
+  '🗑️': Trash2,
+  '📤': Upload, '📥': Download,   // 27/11 Tool Bar มาตรฐาน: Export / Import   // 25/11 Tool Bar ปุ่มลบ (มือถือแสดงไอคอน)
 };
 const LUCIDE = {
   Recycle, Settings, Zap, CircleCheck, Plane, Plus, Sunrise, Kanban, Award, Landmark, House, Building2, Store, Factory,
@@ -39,7 +41,7 @@ const LUCIDE = {
   Link, Wrench, Bolt, Sparkles, Archive, Database, CalendarDays, Anvil, Map, Rocket, Truck, Siren, Hammer, UsersRound,
   Compass, Toolbox, Gamepad2, Camera, FolderOpen, Shield, ShieldCheck, PenLine, Globe, Drama, MessageSquare, BellOff,
   LogOut, Folder, Menu, QrCode, ClipboardCheck, Star, UserRound, Pin, PanelLeftClose,
-  FlaskConical, UserRoundCheck, Target, ArrowUp, Undo2, Handshake, Upload, Flag, Receipt, Hand,
+  FlaskConical, UserRoundCheck, Target, ArrowUp, Undo2, Handshake, Upload, Flag, Receipt, Hand, Trash2, Download,
 };
 
 // emoji นำหน้าป้าย (ชุดเดียวกับ LEAD_RE ใน utils/i18n.js — รวม variation selector / ZWJ / ช่องว่าง)
