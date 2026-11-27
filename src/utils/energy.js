@@ -368,6 +368,27 @@ export function meterStatus(receivedAt, nowMs = Date.now()) {
   return age > METER_OFFLINE_MIN ? 'offline' : 'online'
 }
 
+/** ⏸️ ทำงาน/รอ จากเกณฑ์ idle_kw ต่อมิเตอร์ (27/11 · คำสั่ง user "เปิดช่องเกณฑ์ไว้ว่างก่อน")
+ *  'run' = kW ≥ เกณฑ์ · 'idle' = kW < เกณฑ์ · null = ไม่ได้ตั้งเกณฑ์/ไม่ออนไลน์/ไม่มีค่า kW (จอเขียน "ออนไลน์" ตามเดิม) */
+export function runStateOf(kw, idleKw, status = 'online') {
+  if (status !== 'online' || kw == null || idleKw == null || !Number.isFinite(Number(kw)) || !Number.isFinite(Number(idleKw))) return null
+  return Number(kw) >= Number(idleKw) ? 'run' : 'idle'
+}
+
+/** ⏱️ ชั่วโมงทำงานจากรายนาที — นาทีที่ kW ≥ เกณฑ์ (ไม่ใช้ kw_max: โหลดกระชากนาทีเดียวไม่ใช่ "เดินเครื่อง")
+ *  @returns {{ runMin:number, dataMin:number, pct:number|null } | null}  null = ไม่ได้ตั้งเกณฑ์ */
+export function runMinutes(readings, idleKw) {
+  if (idleKw == null || !Number.isFinite(Number(idleKw))) return null
+  let runMin = 0, dataMin = 0
+  for (const r of readings || []) {
+    const kw = r?.kw == null || r.kw === '' ? null : Number(r.kw)
+    if (kw == null || !Number.isFinite(kw)) continue
+    dataMin++
+    if (kw >= Number(idleKw)) runMin++
+  }
+  return { runMin, dataMin, pct: dataMin ? runMin / dataMin : null }
+}
+
 const numOrNull = (v) => (v == null || v === '' || !Number.isFinite(Number(v)) ? null : Number(v))
 
 /**
@@ -414,6 +435,7 @@ export function buildLiveBoard({ meters = [], live = [], daily = [], today, nowM
       const ph = ['a1', 'a2', 'a3'].map(x => numOrNull(f[x]?.value))
       const aLimitBasis = ph.every(x => x != null) ? Math.max(...ph) : a
       const overA = status === 'online' && aLimitBasis != null && limitA != null && aLimitBasis > limitA
+      const idleKw = numOrNull(m.idle_kw)
       return {
         key: k, name: m.scope_name, panel: m.panel || '—', subtitle: m.subtitle || '',
         // 🏷️ ชื่อบนจอ (display_name · ตั้งที่แท็บ "ตั้งค่าตู้" 23/11) — `name` ยังเป็นคีย์ข้อมูล/แม่-ลูก/URL ห้ามสลับ
@@ -432,6 +454,8 @@ export function buildLiveBoard({ meters = [], live = [], daily = [], today, nowM
         monthKwh: days.length ? days.reduce((s, d) => s + (numOrNull(d.kwh) || 0), 0) : null,
         monthDays: new Set(days.map(d => d.day)).size,
         overKw, overA,
+        // ⏸️ ทำงาน/รอ (27/11) — ตัดสินเฉพาะเมื่อตั้งเกณฑ์ (idle_kw) + ออนไลน์ + มีค่า kW · ไม่งั้น null (ห้ามเดา)
+        idleKw, runState: runStateOf(kw, idleKw, status),
       }
     })
 

@@ -14,8 +14,8 @@ import { can } from '../utils/permissions';
 import { askConfirm } from '../utils/askConfirm';
 import { tr } from '../utils/i18n';
 
-const COLS = 'scope_kind, scope_name, display_name, panel, parent_name, subtitle, limit_kw, limit_a, gauge_max_kw, sort_order, is_active, updated_at, updated_by';
-const FIELDS = ['display_name', 'panel', 'parent_name', 'subtitle', 'limit_kw', 'limit_a', 'gauge_max_kw', 'sort_order', 'is_active'];
+const COLS = 'scope_kind, scope_name, display_name, panel, parent_name, subtitle, limit_kw, limit_a, gauge_max_kw, idle_kw, sort_order, is_active, updated_at, updated_by';
+const FIELDS = ['display_name', 'panel', 'parent_name', 'subtitle', 'limit_kw', 'limit_a', 'gauge_max_kw', 'idle_kw', 'sort_order', 'is_active'];
 const card = { background: 'var(--card)', border: '1px solid var(--border)', borderRadius: 'var(--r-md)', padding: 14, boxShadow: 'var(--shadow-sm)' };
 const th = { textAlign: 'left', padding: '6px 8px', fontSize: 12, color: 'var(--muted)', fontWeight: 700, whiteSpace: 'nowrap', borderBottom: '1px solid var(--border)' };
 const td = { padding: '5px 6px', borderBottom: '1px solid var(--border)', verticalAlign: 'middle' };
@@ -143,13 +143,13 @@ export default function EnergyMeterSetup() {
       <div style={card}>
         <div style={{ fontSize: 14, fontWeight: 800, color: 'var(--text)' }}>{tr('ตู้บนบอร์ดค่าไฟสด')} ({rows.length})</div>
         <div style={{ fontSize: 11.5, color: 'var(--muted)', marginBottom: 8 }}>
-          {tr('มิเตอร์ = ชื่อที่ข้อมูลเข้ามา (แก้ไม่ได้ ประวัติผูกอยู่) · ชื่อที่โชว์ = ชื่อบนบอร์ด (ว่าง = ใช้ชื่อมิเตอร์) · ต่อจาก = ตู้แม่ในผังจ่ายไฟ (ว่าง = ชั้นบนสุดของตู้) · ลิมิตว่าง = ไม่เตือน')}
+          {tr('มิเตอร์ = ชื่อที่ข้อมูลเข้ามา (แก้ไม่ได้ ประวัติผูกอยู่) · ชื่อที่โชว์ = ชื่อบนบอร์ด (ว่าง = ใช้ชื่อมิเตอร์) · ต่อจาก = ตู้แม่ในผังจ่ายไฟ (ว่าง = ชั้นบนสุดของตู้) · ลิมิตว่าง = ไม่เตือน · เกณฑ์รอ = kW ต่ำกว่านี้ถือว่า "รอ" (ว่าง = ไม่ตัดสิน ทำงาน/รอ)')}
         </div>
         <div style={{ overflowX: 'auto' }}>
           <table style={{ width: '100%', borderCollapse: 'collapse', minWidth: 1100 }}>
             <thead><tr>
               <th style={th}>{tr('มิเตอร์')}</th><th style={th}>{tr('ชื่อที่โชว์')}</th><th style={th}>{tr('ตู้')}</th><th style={th}>{tr('ต่อจาก')}</th>
-              <th style={th}>{tr('คำอธิบาย')}</th><th style={th}>{tr('ลิมิต kW')}</th><th style={th}>{tr('ลิมิต A')}</th><th style={th}>{tr('สเกลเกจ kW')}</th>
+              <th style={th}>{tr('คำอธิบาย')}</th><th style={th}>{tr('ลิมิต kW')}</th><th style={th}>{tr('ลิมิต A')}</th><th style={th}>{tr('สเกลเกจ kW')}</th><th style={th} title={tr('kW ต่ำกว่านี้ = รอ · ว่าง = ยังไม่ตั้ง (บอร์ดไม่ตัดสินทำงาน/รอ)')}>{tr('เกณฑ์รอ (kW)')}</th>
               <th style={th}>{tr('ลำดับ')}</th><th style={th}>{tr('แสดง')}</th><th style={th} />
             </tr></thead>
             <tbody>
@@ -171,6 +171,7 @@ export default function EnergyMeterSetup() {
                     <td style={{ ...td, width: 90 }}><input style={inp} type="number" min="0" value={d.limit_kw} disabled={dis} onChange={e => setD(k, 'limit_kw', e.target.value)} /></td>
                     <td style={{ ...td, width: 90 }}><input style={inp} type="number" min="0" value={d.limit_a} disabled={dis} onChange={e => setD(k, 'limit_a', e.target.value)} /></td>
                     <td style={{ ...td, width: 90 }}><input style={inp} type="number" min="0" value={d.gauge_max_kw} disabled={dis} onChange={e => setD(k, 'gauge_max_kw', e.target.value)} /></td>
+                    <td style={{ ...td, width: 90 }}><input style={inp} type="number" min="0" step="0.1" value={d.idle_kw} placeholder={tr('ไม่ตั้ง')} disabled={dis} onChange={e => setD(k, 'idle_kw', e.target.value)} aria-label={`${tr('เกณฑ์รอ (kW)')} ${r.scope_name}`} /></td>
                     <td style={{ ...td, width: 70 }}><input style={inp} type="number" value={d.sort_order} disabled={dis} onChange={e => setD(k, 'sort_order', e.target.value)} /></td>
                     <td style={{ ...td, textAlign: 'center' }}><input type="checkbox" checked={d.is_active !== false} disabled={dis} onChange={e => setD(k, 'is_active', e.target.checked)} aria-label={tr('แสดงบนบอร์ด')} /></td>
                     <td style={{ ...td, whiteSpace: 'nowrap' }}>
@@ -184,7 +185,7 @@ export default function EnergyMeterSetup() {
                   </tr>
                 );
               })}
-              {!rows.length && <tr><td style={{ ...td, color: 'var(--muted)' }} colSpan={11}>{tr('ยังไม่มีตู้บนบอร์ด')}</td></tr>}
+              {!rows.length && <tr><td style={{ ...td, color: 'var(--muted)' }} colSpan={12}>{tr('ยังไม่มีตู้บนบอร์ด')}</td></tr>}
             </tbody>
           </table>
         </div>

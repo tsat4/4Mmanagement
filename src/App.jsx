@@ -20,7 +20,8 @@ import ChangePasswordModal from './components/ChangePasswordModal';
 const FeedbackModal = lazy(() => import('./components/FeedbackModal'));
 const NotifyPrefsModal = lazy(() => import('./components/NotifyPrefsModal'));  // 🔕 ตั้งค่าแจ้งเตือนของฉัน
 import { loadPermissions, canAccessPage, setDeptAdmin, setSharedAccount, can, canSeeded, hasPermission } from './utils/permissions';
-import { NAV_SUB_TABS } from './utils/navSubTabs';            // 🗂️ 24/11 แท็บของหน้า = ข้อย่อยในแผงเมนู
+import { NAV_SUB_TABS } from './utils/navSubTabs';
+import { useNavTabsLive, clearNavTabsLive } from './utils/navTabsLive';   // 🗂️ 27/11 แท็บสดของทุกหน้า (PageHeader ประกาศ) → ข้อย่อยในแผงเมนู            // 🗂️ 24/11 แท็บของหน้า = ข้อย่อยในแผงเมนู
 /* 🏷️ รุ่นของเว็บ (full / nm) — สลับตอน build ด้วย alias ใน vite.nm.config.js · 📄 src/appEdition.js */
 import { EDITION, EDITION_LABEL, EDITION_HOME } from './appEdition';
 import { LOGISTIC_GROUPS } from './utils/logisticSide';
@@ -105,7 +106,7 @@ const LiveBenefits = lazy(() => import('./pages/LiveBenefits'));
 const ProgramUpdate = lazy(() => import('./pages/ProgramUpdate'));
 /* 🧭 ไม่ lazy โดยตั้งใจ — หน้านี้ต้องทำงานตอนบันเดิลเก่า/โหลด chunk ไม่ได้ (ดูหัวไฟล์) */
 import NotFound from './pages/NotFound';
-import Icon from './components/Icon';   // ✒️ emoji ในทะเบียนเมนู → ไอคอนเส้นที่จุดวาด (UI §6.36)
+import Icon, { stripIcon } from './components/Icon';   // ✒️ emoji ในทะเบียนเมนู → ไอคอนเส้นที่จุดวาด (UI §6.36)
 import { ACTIVITIES } from './utils/activityPages';   // 🎯 หมวดกิจกรรม (25/11) — route 9 หน้า
 const HeijunkaKanban = lazy(() => import('./pages/HeijunkaKanban'));
 const ProductMaster  = lazy(() => import('./pages/ProductMaster'));
@@ -554,6 +555,7 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
   // 🔄 ผลการทับขอบเขตด้วย org_assignments — มาจาก UserContext (ProtectedLayout) ไม่เพิ่ม prop
   const { assignOverlay } = useContext(UserContext);
   const location = useLocation();
+  const navTabsLive = useNavTabsLive();   // 🗂️ 27/11
   const isMobile = useIsMobile();
   const [sigModalOpen,  setSigModalOpen]  = useState(false);
   const [fbOpen, setFbOpen] = useState(false);   // 💬 กล่องรับ feedback หน้างาน
@@ -864,9 +866,13 @@ export function Sidebar({ isOpen, onClose, onLogout, theme, onToggleTheme, userR
      · กดข้อย่อย = ปิดแผงเหมือนเมนูอื่น (ปักหมุด = ค้าง) — user เลือก 24/11 ══ */
   const subTabsOf = (item) => {
     const reg = NAV_SUB_TABS[item.to];
-    if (!reg) return null;
-    const tabs = reg.tabs.filter(t => !t.perm || hasPermission(t.perm, userRole));
-    return tabs.length ? { ...reg, tabs } : null;
+    if (reg) {
+      const tabs = reg.tabs.filter(t => !t.perm || hasPermission(t.perm, userRole));
+      return tabs.length ? { ...reg, tabs } : null;
+    }
+    /* 27/11: หน้าที่ไม่อยู่ในทะเบียนตายตัว = ใช้แท็บที่ PageHeader ประกาศตอนเปิดหน้า (จำใน localStorage · กรองสิทธิ์โดยหน้าแล้ว) */
+    const live = navTabsLive[item.to];
+    return live && live.tabs.length ? { param: live.param, tabs: live.tabs.map(t => ({ ...t, label: stripIcon(t.label) })) } : null;
   };
   const subLinkStyle = (on) => ({
     display: 'block', position: 'relative', textDecoration: 'none', borderRadius: 'var(--radius)',
@@ -2055,6 +2061,7 @@ function ProtectedLayout({ session, theme, onToggleTheme, userRole, realRole, vi
        ตอนนี้ **"ออกจากระบบแล้วเข้าใหม่" = ทางแก้จริง** — ประโยคเดียวที่หน้างานทำตามได้ */
     setMasterAuthUser(null);   // 🔐 ปิดประตูก่อนล้าง — หน้าที่ re-render ระหว่างนี้ห้ามจดลิสต์ว่างลง cache (masterCache.js)
     clearAllMasterCache();
+    clearNavTabsLive();   // 27/11 แท็บสดเป็นของบัญชีนี้ (กรองสิทธิ์แล้ว) — สลับคนต้องเริ่มใหม่
     await supabase.auth.signOut({ scope: 'local' });
     navigate('/login');
   };
