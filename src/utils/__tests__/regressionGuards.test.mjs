@@ -2302,6 +2302,67 @@ test('🛡️ oee-live-needs-ngforp — ทุกจุดที่เรีย�
     + bad.map(f => '   • ' + f).join('\n') + '\n');
 });
 
+/* 🛡️ q-ratio-single-entry (2026-11-25 · คำสั่ง user "ยอดผลิต = งานดี + งานต้องสงสัย")
+   สูตร %Q เคยมี **3 สำเนา** เขียนมือ: `computeLiveOee` · `computeSessionOee` · `restampQPatch`
+   ⇒ ตอน QA ตัดสินของสงสัย/ผลซ่อม จอสดกับกะที่ปิดแล้วตอบคนละเลขจากข้อมูลชุดเดียวกัน
+   ตอนนี้ยุบเหลือ `qRatio()` ตัวเดียว (oee.js §7.2.2) + ฐานจาก `qTotalCount()`
+   🔴 กฎนี้จับ "ตัวหารที่เขียนมือ" ไม่ใช่แค่ชื่อฟังก์ชัน — แพตเทิร์น `x / (x + ng)` คือสิ่งที่
+      คนเขียนใหม่โดยไม่รู้ว่ามีของกลางอยู่แล้ว (เป็นสูตรที่ "ดูถูก" จนไม่มีใครสงสัย) */
+test('🛡️ q-ratio-single-entry — ห้ามเขียนตัวหาร %Q เองนอก oee.js', () => {
+  /* ยกเว้นรายไฟล์ — ต้องเขียนเหตุผลทุกตัว */
+  const ALLOW = {
+    /* เทสเหล่านี้ "ตรึงค่าของสูตรเดิม" ไว้เทียบ — ตัวเลขดิบในเทสไม่ใช่โค้ดที่รันบนจอ */
+    'src/utils/__tests__/producedTotalCount.test.mjs': 'เทียบค่าสูตรเดิม/ใหม่ให้เห็นส่วนต่าง',
+    'src/utils/__tests__/qualityZeroOutput.test.mjs': 'เรียก qRatio ของจริง + สแกนซอร์ส',
+    /* %VA ของ VSM = เวลาที่เพิ่มค่า ÷ (VA + NVA) — คนละ KPI คนละหน่วย (วินาที) ไม่ใช่ %Q */
+    'src/lib/vsmModel.js': '%VA (vaSec/(vaSec+nvaSec)) — สัดส่วนเวลา ไม่ใช่สัดส่วนชิ้น',
+    /* FTT = First Time Through — ตัวหารเขียนไว้ว่า "ผลิตจริง = total + ng" พร้อมเหตุผลในหน้า
+       🔴 ยังไม่ย้ายมา `qRatio` เพราะเป็น KPI แยก (ของสงสัยที่รอ QA ควรเข้าฐานไหมยังไม่เคาะ)
+          — ถ้าจะย้าย ต้องถาม user ก่อน เพราะเลข FTT ที่รายงานไปแล้วจะขยับ */
+    'src/pages/QualityControl.jsx': 'FTT (KPI แยก) — ตัวหารมีเหตุผลเขียนกำกับในหน้า',
+  };
+  const bad = [];
+  for (const file of walk(join(ROOT, 'src'), ['.jsx', '.js', '.mjs'])) {
+    const rel = relative(ROOT, file);
+    if (rel === 'src/utils/oee.js' || ALLOW[rel]) continue;
+    const code = stripComments(readFileSync(file, 'utf8'));
+    /* `<ตัวแปร> / (<ตัวแปรเดิม> + <อะไรก็ได้>)` = สูตร %Q/สัดส่วนที่เขียนมือ */
+    const re = /([A-Za-z_$][\w$.]*)\s*\/\s*\(\s*\1\s*\+/g;
+    let m;
+    while ((m = re.exec(code))) {
+      const line = code.slice(0, m.index).split('\n').length;
+      bad.push(`${rel}:${line}  (${m[0].trim()}…)`);
+    }
+  }
+  assert.deepEqual(bad, [],
+    '\n\n❌ เขียนตัวหารแบบ `x / (x + y)` เอง — ถ้านี่คือ %Q ให้ใช้ของกลาง\n'
+    + '   ทำไมห้าม: ตัวหารของ %Q คือ **ยอดผลิต** (ทุกชิ้นที่เครื่องทำออกมา) ไม่ใช่ "ยอดสแกน + ของเสีย"\n'
+    + '            ⇒ ชิ้นที่ซ่อมเสร็จ/ของสงสัยที่ QA เคลียร์ จะไม่มีทางกลับมาเป็นของดีของกะต้นทาง\n'
+    + '            และสำเนาที่ 2 ของสูตรจะไม่ขยับตาม = จอเดียวกันตอบ 2 ค่า (เคยเกิดจริง 3 สำเนา)\n'
+    + '   แก้ยังไง: import { qRatio, qTotalCount } from "../utils/oee"\n'
+    + '            const Q = qRatio(qTotalCount(<ยอดสแกน>, <แถว defect_logs>), <ของเสียที่ตัดสินแล้ว>)\n'
+    + '            ถ้าไม่ใช่ %Q (เป็นสัดส่วนอื่นจริงๆ) ให้เติม ALLOW ในเทสนี้พร้อมเหตุผล\n\n'
+    + bad.map(f => '   • ' + f).join('\n') + '\n');
+});
+
+/* 🛡️ produced-total-count-not-qty-ok (2026-11-25 · คำสั่ง user)
+   user: *"ยอดผลิตไม่ใช่ `qty_ok` นะ ยอดผลิต = งานดี + งานต้องสงสัย"*
+   จอที่เขียนป้าย "ยอดผลิต/ผลิตได้" แล้วโชว์ยอดสแกนเฉยๆ = ต่ำกว่าความจริง (วัดจริง Line 61
+   กะเช้า 11/11: โชว์ 445 ทั้งที่เครื่องทำออกมา 475) ⇒ บังคับให้ DailyReport เดินผ่านของกลาง */
+test('🛡️ produced-total-count-not-qty-ok — การ์ด/แผงสรุปของ DailyReport ต้องใช้ producedTotalCount', () => {
+  const code = readFileSync(join(ROOT, 'src/pages/DailyReport.jsx'), 'utf8');
+  assert.ok(/producedTotalCount\(/.test(code),
+    '\n\n❌ DailyReport ไม่เรียก producedTotalCount() แล้ว\n'
+    + '   ทำไมต้องมี: ป้าย "ยอดผลิต" ต้องหมายถึงทุกชิ้นที่เครื่องทำออกมา ไม่ใช่ยอดสแกน\n'
+    + '   แก้ยังไง: import { producedTotalCount } from "../utils/oee" แล้วใช้กับทุกช่องที่เขียนว่ายอดผลิต\n');
+  /* การ์ดภาพรวมอยู่หน่วย "คู่/shot" ⇒ ต้องยุบของเสียด้วยกติกาเดียวกันก่อน ห้ามบวกชิ้นดิบเข้าไป */
+  assert.ok(/pairAwareOpTotal\([^)]*produced:\s*r\.pcs/s.test(code.replace(/\n/g, ' ')),
+    '\n\n❌ ยอดผลิตบนการ์ดภาพรวมไม่ได้ยุบคู่ RH/LH ด้วยรางเดียวกับยอดดี\n'
+    + '   ทำไมห้าม: การ์ดนี้อยู่หน่วย "คู่/shot" (pairAwareOpTotal) · ของเสียเป็น "ชิ้น"\n'
+    + '            บวกตรงๆ = ผสมหน่วย ไลน์งานคู่จะเกินจริงเท่าตัว\n'
+    + '   แก้ยังไง: ใส่ `pcs` ลงแถวราย MAT แล้วส่งผ่าน pairAwareOpTotal ชุดที่ 2 (produced: r.pcs)\n');
+});
+
 test('🛡️ ทุกกฎต้องมี why + fix เขียนกำกับ (ข้อความนี้คือสิ่งที่คนเห็นตอน build ล่ม)', () => {
   for (const r of RULES) {
     assert.ok(r.why && r.why.length > 30, `${r.id}: ต้องเขียน why ให้เข้าใจว่าเคยพังยังไง`);
