@@ -407,6 +407,10 @@ export const STICKY_TAB_GROUPS = [LOGISTIC_GROUPS.inbound, 'กิจกรร�
 /* 📌 หมวดที่หัวเพจ "ค้างทั้งก้อน" (Header + Detail Bar + Tool Bar) ตอนเลื่อน Card Dashboard (25/11 · คำสั่ง user หมวดกิจกรรม)
    ต่างจาก STICKY_TAB_GROUPS ที่ค้างเฉพาะแถบ (ชื่อหน้าเลื่อนหาย) · ต้องอยู่ใน STICKY_TAB_GROUPS ด้วย (โหมดกะทัดรัด) */
 export const FULL_STICKY_GROUPS = ['กิจกรรม'];
+/* 📐 หมวดที่ใช้หัวเพจมาตรฐาน `std` (27/11 · คำสั่ง user "แผน สโตร์ และ กิจกรรม" — กวาดทีละหมวด)
+   Detail Bar แถวเดียว ◀ ▶ มีเสมอ + Tool Bar 7 ปุ่มขวา (ไม่ใช้ = จาง) · แท็บเดิมของหน้า = Detail Bar (ยังอยู่ในหน้า)
+   · PageHeader ตัดสินเอง · หมวดถัดไปเพิ่มที่นี่หลัง user เคาะรูป (UI §0.1) */
+export const STD_LAYOUT_GROUPS = [LOGISTIC_GROUPS.inbound, 'กิจกรรม'];
 
 // สรุปสิทธิ์เข้าหน้าของ role จากตารางสิทธิ์จริง (role_permissions) — ใช้โชว์ในหน้า จัดการผู้ใช้งาน
 // เพื่อไม่ต้อง hardcode รายชื่อโมดูลต่อ role (เคย hardcode แล้ว drift ตามโมดูลที่เพิ่มไม่ทัน)
