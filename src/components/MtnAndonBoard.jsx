@@ -81,6 +81,9 @@ const PM_SOON_DAYS = 7;
 const fmtMin = fmtDtElapsed;
 const daysSince = (iso) => (iso ? Math.floor((Date.now() - new Date(iso)) / 86400000) : null);
 const normNo = (s) => String(s || '').trim().toUpperCase();
+/* ใบซ่อมที่ "เครื่องยังซ่อมไม่เสร็จ" — ใช้ระบายเหลืองบนผัง (27/11 · คำสั่ง user)
+   ⚠️ ไม่ใช่ OPEN_MO_STATUSES ทั้งชุด: ใบที่ซ่อมเสร็จแล้วรอตรวจ/รับมอบ/เซ็นปิด เครื่องเดินได้แล้ว */
+const REPAIRING_MO = ['pending', 'assigned', 'repairing', 'waiting_vendor'];
 
 const TEAM_ICON = { maintenance: '🔧', jig_maintenance: '🗜️', die_maintenance: '🔨', production: '🏭' };
 
@@ -329,21 +332,6 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
     return m;
   }, [live]);
   const openSet = useMemo(() => new Set(openLines), [openLines]);
-  const stateOf = useCallback((lineName) => {
-    const st = lineState[lineName];
-    /* ⚠️ ลำดับนี้ห้ามสลับ: **เครื่องหยุดชนะเสมอ** แม้บนจอสโตร์
-       (ไลน์ที่เครื่องหยุดอยู่ ยังไม่ต้องรีบเอาของไปส่ง — ส่งไปก็ยังผลิตไม่ได้)
-       ⇒ ผังใบเดียวจึงไม่มีทางตอบขัดกันเองระหว่าง 3 แผนก */
-    if (st) return { color: st.color, blink: st.blink, label: `${tr("หยุด")} ${fmtMin(st.min)}` };
-    const w = storeWait[lineName];
-    if (w) return { color: w.color, blink: false, label: `📦 ${w.label}` };
-    /* 📋 จอผลิต: งานประจำกะค้าง (AM/Poka-Yoke/LPA) — รองจากเครื่องหยุด ก่อน "เปิดกะอยู่" (12/10)
-       สีฟ้าอมเขียวแยกจากสีสถานะเครื่องโดยตั้งใจ · ไม่กระพริบ (ดู ROUTINE_MAP_COLOR) */
-    const rt = routineMap[lineName];
-    if (rt) return { color: rt.color, blink: false, label: rt.label };
-    if (openSet.has(lineName)) return { color: 'var(--green)', blink: false, label: null };
-    return null;   // ไม่ได้เปิดกะ → เทาจาง
-  }, [lineState, openSet, storeWait, routineMap]);
 
   /* ── ใบซ่อมค้าง (จาก loader ของส่วนงานซ่อมบำรุง — ไม่ยิงซ้ำ) ── */
   const allMo = useMemo(() => (d.mo || [])
@@ -352,6 +340,41 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
     .sort((a, b) => String(a.report_at || '').localeCompare(String(b.report_at || ''))), [d.mo, inScope]);
   const mo = useMemo(() => (team ? allMo.filter(o => !o.mtn_dept || teamKeyOf(o.mtn_dept) === team) : allMo), [allMo, team]);
   const moHidden = allMo.length - mo.length;
+  /* 🔧 นับใบ "เครื่องยังซ่อมไม่เสร็จ" รายไลน์ → ระบายเหลืองบนผัง (27/11 · คำสั่ง user)
+     · นับเฉพาะ REPAIRING_MO (ซ่อมเสร็จแล้ว รอตรวจ/รับมอบ/เซ็นปิด = เครื่องเดินได้ ไม่นับ)
+     · ทีมช่างเลือกทีมอยู่ = เห็นของทีมตัวเอง (`mo` กรองทีมแล้ว · ใบไม่ระบุทีมยังนับ)
+       ฝ่ายผลิต (จอผลิต / แท็บ PRODUCTION) + "ทุกทีม" = เห็นทุกทีม (`allMo`)
+     · ⚠️ เครื่องหยุด (downtime) ยังไม่กรองทีมเหมือนเดิม — กรองเฉพาะสีของใบซ่อม
+     · ใบที่ไม่ได้ระบุไลน์ = ไม่ระบายผัง (ยังอยู่ในการ์ด "ใบซ่อมค้าง") */
+  const repairByLine = useMemo(() => {
+    const src = team && !isAmTeam(team) ? mo : allMo;
+    const m = {};
+    src.forEach(o => {
+      if (!REPAIRING_MO.includes(o.status)) return;
+      const k = normNo(o.line_name); if (!k) return;
+      m[k] = (m[k] || 0) + 1;
+    });
+    return m;
+  }, [team, mo, allMo]);
+  const stateOf = useCallback((lineName) => {
+    const st = lineState[lineName];
+    /* ⚠️ ลำดับนี้ห้ามสลับ: **เครื่องหยุดชนะเสมอ** แม้บนจอสโตร์
+       (ไลน์ที่เครื่องหยุดอยู่ ยังไม่ต้องรีบเอาของไปส่ง — ส่งไปก็ยังผลิตไม่ได้)
+       ⇒ ผังใบเดียวจึงไม่มีทางตอบขัดกันเองระหว่าง 3 แผนก */
+    if (st) return { color: st.color, blink: st.blink, label: `${tr("หยุด")} ${fmtMin(st.min)}` };
+    /* 🔧 ใบซ่อมที่เครื่องยังซ่อมไม่เสร็จ (27/11 · user "มีใบซ่อมอยู่ระหว่างซ่อม ควรเหลือง ไม่ใช่เงียบ")
+       รองจากเครื่องหยุด · เหลืองนิ่ง + ป้าย "🔧 ซ่อม n ใบ" (แยกจากเหลือง "หยุด xx นาที" ด้วยป้าย) */
+    const nRep = repairByLine[normNo(lineName)];
+    if (nRep) return { color: 'var(--amber)', blink: false, label: `🔧 ${tr("ซ่อม")} ${nRep} ${tr("ใบ")}` };
+    const w = storeWait[lineName];
+    if (w) return { color: w.color, blink: false, label: `📦 ${w.label}` };
+    /* 📋 จอผลิต: งานประจำกะค้าง (AM/Poka-Yoke/LPA) — รองจากเครื่องหยุด ก่อน "เปิดกะอยู่" (12/10)
+       สีฟ้าอมเขียวแยกจากสีสถานะเครื่องโดยตั้งใจ · ไม่กระพริบ (ดู ROUTINE_MAP_COLOR) */
+    const rt = routineMap[lineName];
+    if (rt) return { color: rt.color, blink: false, label: rt.label };
+    if (openSet.has(lineName)) return { color: 'var(--green)', blink: false, label: null };
+    return null;   // ไม่ได้เปิดกะ → เทาจาง
+  }, [lineState, openSet, storeWait, routineMap, repairByLine]);
   const moByStep = useMemo(() => {
     const m = {}; mo.forEach(o => { m[o.status] = (m[o.status] || 0) + 1; }); return m;
   }, [mo]);
@@ -556,6 +579,7 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
             <span>{tr("กดกรอบไลน์ = ดูปัญหาของไลน์นั้น")}</span>
             <span><b style={{ color: 'var(--red)' }}>■</b> {tr('เรียกช่าง (กระพริบ)')}</span>
             <span><b style={{ color: 'var(--amber)' }}>■</b> {tr('หยุดเกินเกณฑ์')}</span>
+            {showMo && <span><b style={{ color: 'var(--amber)' }}>■</b> {tr('🔧 มีใบซ่อมที่ยังซ่อมไม่เสร็จ')}</span>}
             <span><b style={{ color: 'var(--blue)' }}>■</b> {tr('เพิ่งหยุด (ยังในกรอบ)')}</span>
             <span><b style={{ color: 'var(--green)' }}>■</b> {tr('เปิดกะอยู่')}</span>
             <span><b style={{ color: 'var(--muted)' }}>■</b> {tr('ไม่ได้เปิดกะ')}</span>
@@ -743,7 +767,7 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
               {mo.slice(0, 4).map(o => {
                 const age = daysSince(o.report_at);
                 return (
-                  <div key={o.id} onClick={() => navigate('/mtn-repair')}
+                  <div key={o.id} onClick={() => navigate(`/mtn-repair?mo=${encodeURIComponent(o.id)}`)}
                     style={{ cursor: 'pointer', display: 'flex', justifyContent: 'space-between', gap: 8, padding: '4px 0', borderTop: '1px solid var(--border)', fontSize: 11 * big }}>
                     <span style={{ color: 'var(--text)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                       {o.machine_no || o.line_name || o.mo_no || '-'}
@@ -811,7 +835,7 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
                   {!zMo.length ? <div style={{ fontSize: 12.5, color: 'var(--muted)' }}>{tr('ไม่มีใบค้างของไลน์นี้')}</div> : (
                     <div style={{ display: 'grid', gap: 4 }}>
                       {zMo.slice(0, 8).map(o => (
-                        <div key={o.id} onClick={() => navigate('/mtn-repair')} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, cursor: 'pointer' }}>
+                        <div key={o.id} onClick={() => navigate(`/mtn-repair?mo=${encodeURIComponent(o.id)}`)} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, cursor: 'pointer' }}>
                           <b style={{ color: 'var(--text)', flexShrink: 0 }}>{o.mo_no || tr('⏳ รอออกเลข')}</b>
                           <span style={{ color: 'var(--muted)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {o.machine_no || tr("ไม่ระบุเครื่อง")}{o.problem_characteristic ? ` · ${o.problem_characteristic}` : ''}
@@ -833,8 +857,8 @@ export default function MtnAndonBoard({ d, ctx, cards = 'maintenance' }) {
                           <span style={{ color: 'var(--text)', minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                             {p.name}{p.am && <span style={{ color: 'var(--green)', fontWeight: 800 }}> · AM</span>}
                           </span>
-                          <b style={{ marginLeft: 'auto', flexShrink: 0, color: p.days < 0 ? 'var(--red)' : p.days === 0 ? 'var(--amber)' : 'var(--muted)' }}>
-                            {p.days < 0 ? `${tr("เกิน")} ${Math.abs(p.days)} ${tr("วัน")}` : p.days === 0 ? tr("วันนี้") : `${tr("อีก")} ${p.days} ${tr("วัน")}`}
+                          <b style={{ marginLeft: 'auto', flexShrink: 0, color: p.bucket === 'never' ? 'var(--amber)' : p.days < 0 ? 'var(--red)' : p.days === 0 ? 'var(--amber)' : 'var(--muted)' }}>
+                            {p.bucket === 'never' ? tr("ไม่เคยตรวจ") : p.days < 0 ? `${tr("เกิน")} ${Math.abs(p.days)} ${tr("วัน")}` : p.days === 0 ? tr("วันนี้") : `${tr("อีก")} ${p.days} ${tr("วัน")}`}
                           </b>
                         </div>
                       ))}
