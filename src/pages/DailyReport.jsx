@@ -61,7 +61,7 @@ import StoreLotQueue from '../components/StoreLotQueue';
 import LineWipPanel from '../components/LineWipPanel';
 import LinePartCallPanel from '../components/LinePartCallPanel';
 import ProcessTypeSetup from '../components/ProcessTypeSetup';
-import { affectsLanesMap, computeSessionOee, sessionProducedQty, strictOee, strictGap, STRICT_WARN_SHARE_PCT, policyBreakOverlapMin, breakIntervalsIn, breakBandsIn, breakBandName, breakBandTitle, dtMinOutsideBreaks, overlapMinutesWith, buildCtMap, ctForMat, groupSameProductKeys, shiftFrameOf, shiftStartDate, clampWinToShift, unionIv, dtMinOutsideWork, SIX_BIG_LOSSES, EIGHT_WASTES, sumDefectQty, isTrialDefect, splitDefectQty, QBIN_EMBED, sumSuspectPending, sumReworkPending, orderCloseMs, matRawWindow } from '../utils/oee';
+import { affectsLanesMap, computeSessionOee, sessionProducedQty, strictOee, strictGap, STRICT_WARN_SHARE_PCT, policyBreakOverlapMin, breakIntervalsIn, breakBandsIn, breakBandName, breakBandTitle, dtMinOutsideBreaks, overlapMinutesWith, buildCtMap, ctForMat, groupSameProductKeys, shiftFrameOf, shiftStartDate, clampWinToShift, unionIv, dtMinOutsideWork, SIX_BIG_LOSSES, EIGHT_WASTES, sumDefectQty, isTrialDefect, splitDefectQty, QBIN_EMBED, sumSuspectPending, sumReworkPending, ngByMatFrom, producedTotalCount, orderCloseMs, matRawWindow } from '../utils/oee';
 import { planMatTimeWrites, MAT_TIME_SKIP_OPEN } from '../utils/matTimeEdit';
 import { resolveShiftTime, checkShiftTime, shiftWindow, windowLabel, fmtOffset, MAX_SHIFT_MIN, checkCloseTime, dtCoverMin } from '../utils/shiftWindow';
 import { handoverOf, handoverBlockText, sessionLabel as hoSessionLabel } from '../utils/sessionHandover';
@@ -3854,6 +3854,11 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
               const totalTargetPieces = prodOrders.reduce((s, o) => s + o.qty, 0);
               const totalNg = defectLogs.reduce((s, d) => s + (d.qty_ng || 0) + (d.qty_suspect || 0), 0);
               const totalInputNeeded = totalTargetPieces + totalNg;
+              /* 🔴 "ยอดผลิต" = ทุกชิ้นที่เครื่องทำออกมา (oee.js §7.2.2 · คำสั่ง user 25/11)
+                 ⇒ ต้องรู้ "ของเสีย/สงสัย/ซ่อม ราย MAT" เพื่อบวกเข้ายอดของ MAT นั้น **ก่อน** ยุบคู่ RH/LH
+                    (การ์ดภาพรวมอยู่ในหน่วย "คู่/shot" — บวกของเสียรายชิ้นเข้าไปตรงๆ = ผสมหน่วย)
+                 🔴 แยกราย MAT ผ่าน `ngByMatFrom` ตัวเดียวของระบบ ห้ามเขียนลูปของเสียราย MAT ที่นี่ */
+              const { byMat: pcsNgByMat, noMat: pcsNgNoMat } = ngByMatFrom(defectLogs, prodOrders);
 
               const matNos = Array.from(new Set(prodOrders.map(o => o.mat_no))).filter(Boolean);
               const productRows = matNos.map(matNo => {
@@ -3886,19 +3891,44 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                 const winD = clampWinToShift(rawD.startMs, rawD.endMs, shiftFrameOf(selSession));
                 const actualStart = winD.startMs != null ? new Date(winD.startMs) : null;
                 const actualEnd   = winD.endMs   != null ? new Date(winD.endMs)   : null;
-                return { matNo, name, target, confirmed, openCnt, closedCnt, ng, dt, ct, rowPct, actualStart, actualEnd };
+                /* ยอดผลิตจริงของพาร์ทนี้ = ยอดสแกน + ทุกชิ้นที่เครื่องทำออกมาแต่ไม่ใช่ของดี (§7.2.2) */
+                const pcs = confirmed + (Number(pcsNgByMat[matNo]) || 0);
+                return { matNo, name, target, confirmed, pcs, openCnt, closedCnt, ng, dt, ct, rowPct, actualStart, actualEnd };
               }).sort((a, b) => b.target - a.target);
 
               // สรุปภาพใหญ่: นับงานคู่ RH/LH เป็น 1 คู่/stroke (max ของสองข้าง) ไม่บวกชิ้นซ้ำ · พาร์ทเดี่ยว = บวกปกติ
               // + collapseOps: รายการขั้นตอน (OP งานขับนัท) ยุบเข้าพาร์ทจริง ไม่นับซ้ำ (แถวรายพาร์ทยังแยกโชว์ครบ)
               const pt = pairAwareOpTotal(productRows.map(r => ({ mat_no: r.matNo, target: r.target, produced: r.confirmed })), pairOf, opInfoSync());
+              /* ยอดผลิตจริง (รวมของเสีย/สงสัย/ซ่อม) ยุบคู่ด้วยกติกาเดียวกับยอดดี — คนละแถวเดียวกัน
+                 คนละค่า `produced` เท่านั้น ⇒ หน่วยตรงกัน เทียบกันได้ (ส่วนต่าง = ชิ้นที่ยังไม่ใช่ของดี) */
+              const ptPcs = pairAwareOpTotal(productRows.map(r => ({ mat_no: r.matNo, target: r.target, produced: r.pcs })), pairOf, opInfoSync());
               const nullMat = prodOrders.filter(o => !o.mat_no);
-              const totalTarget    = pt.target + nullMat.reduce((s, o) => s + o.qty, 0);
-              const totalConfirmed = pt.produced
-                + nullMat.filter(o => o.status === 'confirmed').reduce((s, o) => s + o.qty, 0)
+              const nullMatProduced = nullMat.filter(o => o.status === 'confirmed').reduce((s, o) => s + o.qty, 0)
                 + nullMat.filter(o => o.status === 'open').reduce((s, o) => s + (o.qty_actual || 0), 0)
                 + nullMat.filter(o => ['carry_over', 'imported'].includes(o.status)).reduce((s, o) => s + (o.qty_actual || 0), 0);
+              const totalTarget    = pt.target + nullMat.reduce((s, o) => s + o.qty, 0);
+              const totalConfirmed = pt.produced + nullMatProduced;
+              /* 🔴 ยอดผลิต = ยอดดี + ชิ้นที่ยังไม่ใช่ของดี · `pcsNgNoMat` = ของเสียที่ไม่ผูกใบ
+                 (ชี้ MAT ไม่ได้ ⇒ เข้า %P ไม่ได้ แต่เครื่องทำมันออกมาจริง ⇒ เข้ายอดผลิต) */
+              const totalPcs = ptPcs.produced + nullMatProduced + pcsNgNoMat;
+              const notGoodYet = Math.max(0, totalPcs - totalConfirmed);
               const pct = totalTarget > 0 ? Math.min(100, Math.round((totalConfirmed / totalTarget) * 100)) : 0;
+              /* บรรทัดใต้การ์ด "ยอดผลิต" — กฎจอซื่อสัตย์: ยอดผลิต ≠ ของดี ⇒ **ต้องเขียนว่าของดีเท่าไหร่
+                 และค้างอยู่กี่ชิ้น** ห้ามปล่อยให้คนอ่านเข้าใจว่าส่งได้ทั้งก้อน · ตัวนับมาจากของกลาง
+                 (`sumDefectQty` ของเสียที่ตัดสินแล้ว · `sumSuspectPending`+`sumReworkPending` ที่ยังรอ) */
+              const scrapPcs = sumDefectQty(defectLogs, 'line');
+              const pendPcs  = sumSuspectPending(defectLogs) + sumReworkPending(defectLogs);
+              const prodParts = [`${tr('ดี')} ${totalConfirmed.toLocaleString()}`];
+              if (scrapPcs > 0) prodParts.push(`${tr('เสีย')} ${scrapPcs.toLocaleString()}`);
+              if (pendPcs > 0)  prodParts.push(`${tr('รอพิจารณา')} ${pendPcs.toLocaleString()}`);
+              if (totalTarget > 0) prodParts.push(`${pct}% ${tr('ของเป้า')} ${totalTarget.toLocaleString()}`);
+              else prodParts.push(tr('ยังไม่มีเป้า (ไม่มีใบผลิต)'));
+              const prodNoteFull = prodParts.join(' · ');
+              /* KpiTile มีบรรทัดเดียว ตัดท้ายด้วย … ⇒ ตัด "% ของเป้า" ออกจากบรรทัดที่โชว์เมื่อมีของค้าง
+                 (แถบความคืบหน้าใต้การ์ดบอก `ยอดดี / เป้า (xx%)` อยู่แล้ว ไม่ได้หายไปไหน)
+                 ข้อความเต็มยังอยู่ใน `title` — เอาเมาส์ชี้เห็นครบ */
+              const prodNote = notGoodYet > 0 ? prodParts.slice(0, -1).join(' · ')
+                : prodParts[prodParts.length - 1];
               const barClr = pct >= 100 ? 'var(--green)' : pct >= 60 ? 'var(--amber)' : 'var(--blue)';
 
               const unassignedDT = dtLogs.filter(d => !d.mat_no).reduce((s, d) => s + (d.duration_min || 0), 0);
@@ -4134,12 +4164,15 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                   <div style={isMobile ? undefined : { flex: '0 0 auto', display: 'flex', flexDirection: 'column' }}>
                   {isMobile && overviewTitle}
                   {/* 📊 การ์ดโครงเดียว (KpiTile · UI §6.35) — เดิม 7 ใบ 5 สี ⇒ 5 ใบ ตัวเลขสีเดียว ข้อมูลเดิมครบ
-                      (เป้ารวม → บรรทัดใต้ "ผลิตได้" · เปิด/ปิดแล้ว → "ใบผลิต" · นอกแผน → บรรทัดใต้ "Downtime") */}
+                      (เป้ารวม+ของดี+รอพิจารณา → บรรทัดใต้ "ยอดผลิต" · เปิด/ปิดแล้ว → "ใบผลิต" · นอกแผน → ใต้ "Downtime") */}
                   <div style={{ display: 'grid', gridTemplateColumns: isMobile ? 'repeat(auto-fit,minmax(150px,1fr))' : 'repeat(4, 160px)', gap: 10, marginBottom: isMobile ? 16 : 0,
                     ...(isMobile ? null : { flex: 1, alignContent: 'stretch' }) }}>
-                    <KpiTile label={tr('ผลิตได้')} value={totalConfirmed} unit={tr("ชิ้น")}
-                      note={totalTarget > 0 ? `${pct}% ${tr("ของเป้า")} ${totalTarget.toLocaleString()}` : tr("ยังไม่มีเป้า (ไม่มีใบผลิต)")}
-                      tone={totalTarget > 0 ? (pct >= 100 ? 'ok' : pct >= 60 ? 'warn' : 'info') : undefined} />
+                    {/* 🔴 "ยอดผลิต" = ทุกชิ้นที่เครื่องทำออกมา ไม่ใช่ยอดสแกน (oee.js §7.2.2 · คำสั่ง user 25/11)
+                        เดิมโชว์ `totalConfirmed` (ของดีล้วน) ⇒ Line 61 กะเช้า 11/11 โชว์ 445 ทั้งที่
+                        เครื่องทำออกมา 475 (สงสัย 30) = ต่ำไป 6.7% · ของดีย้ายไปอยู่บรรทัดใต้ไม่ได้หาย */}
+                    <KpiTile label={tr('ยอดผลิต')} value={totalPcs} unit={tr("ชิ้น")}
+                      note={prodNote} title={prodNoteFull}
+                      tone={notGoodYet > 0 ? 'warn' : (totalTarget > 0 ? (pct >= 100 ? 'ok' : pct >= 60 ? 'warn' : 'info') : undefined)} />
                     <KpiTile label={tr('ใบผลิต')} value={prodOrders.filter(o => o.status === 'confirmed').length} unit={`/ ${prodOrders.length} ${tr("ใบ")}`}
                       note={`${tr("ปิดแล้ว")} ${prodOrders.filter(o => o.status === 'confirmed').length} · ${tr("เปิด")} ${prodOrders.filter(o => o.status === 'open').length}`} />
                     <KpiTile label={tr('Input ต้องเบิก')} value={totalInputNeeded} unit={tr("ชิ้น")}
@@ -5363,8 +5396,10 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill,minmax(90px,1fr))', gap: 10, marginBottom: 14 }}>
                   {[
                     { label: 'เวลากะ',   value: fmtMin(selSession.shift_min),            color: 'var(--text)' },
-                    { label: 'ผลิตได้',  value: `${selSession.actual_qty ?? 0} ชิ้น`,     color: 'var(--green)' },
-                    { label: 'ดี',       value: `${selSession.qty_ok ?? 0} ชิ้น`,         color: 'var(--green)' },
+                    /* 🔴 "ยอดผลิต" = ทุกชิ้นที่เครื่องทำออกมา (oee.js §7.2.2) — เดิมช่องนี้โชว์ `actual_qty`
+                       ซึ่งเท่ากับ `qty_ok` เป๊ะ ⇒ แผงนี้โชว์เลขเดียวกัน 2 ช่องคนละป้าย (SV อ่านแล้วงง) */
+                    { label: 'ยอดผลิต',  value: `${producedTotalCount(selSession.actual_qty, defectLogs).toLocaleString()} ชิ้น`, color: 'var(--text)' },
+                    { label: 'ดี',       value: `${(selSession.qty_ok ?? 0).toLocaleString()} ชิ้น`,  color: 'var(--green)' },
                     { label: 'NG',       value: `${selSession.qty_ng ?? 0} ชิ้น`,         color: 'var(--red)' },
                     { label: 'สงสัย',    value: `${selSession.qty_suspect ?? 0} ชิ้น`,    color: 'var(--amber)' },
                     { label: 'ซ่อม',     value: `${selSession.qty_repair ?? 0} ชิ้น`,     color: 'var(--blue)' },
@@ -5961,7 +5996,10 @@ function LiveTab({ role, stale, onGoStale, focusSessionId, onFocusDone }) {
                         { label: tr("หยุดนอกแผน"),    value: fmtMin(Math.round(loggedUnplannedDT)), color: 'var(--red)' },
                         { label: 'Run Time',      value: fmtMin(runMin),          color: 'var(--blue)' },
                         { label: 'Order ที่ปิด', value: `${prodOrders.filter(o => o.status === 'confirmed').length} ใบ`, color: 'var(--green)' },
-                        { label: 'ผลิตได้',     value: `${totalProduced} ชิ้น`, color: 'var(--green)' },
+                        /* 🔴 ยอดผลิต (ทุกชิ้นที่เครื่องทำออกมา) กับ "ดี" (ยอดสแกน) ต้องเห็นคู่กัน — §7.2.2
+                           user: *"ยอดผลิตที่ออกจากกะนี้ก็ยังควรนับว่าผลิตได้ 100 ชิ้น แต่ดี 98 เสีย 2"* */
+                        { label: 'ยอดผลิต',     value: `${producedTotalCount(totalProduced, defectLogs).toLocaleString()} ชิ้น`, color: 'var(--text)' },
+                        { label: 'ดี',           value: `${totalProduced.toLocaleString()} ชิ้น`, color: 'var(--green)' },
                         { label: 'NG',           value: `${ng} ชิ้น`,        color: 'var(--amber)' },
                         ...(prevDtBrkOv >= 1 ? [{ label: 'DT ทับพัก (ไม่หักซ้ำ)', value: fmtMin(Math.round(prevDtBrkOv)), color: 'var(--muted)' }] : []),
                       ].map(k => (
