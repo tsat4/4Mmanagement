@@ -13200,3 +13200,28 @@ test('🔌 usability-ask-only-pending-parts — ทวงยืนยันส�
     '\n\n❌ ไม่มีทางยุบปุ่มตั้งสถานะไว้ (หรือเอาปุ่มออกไปเลย)\n'
     + '   ไม่ทวง ≠ ปิดปุ่ม — ช่างต้องตั้งสถานะเองได้ทุกเมื่อ\n');
 });
+
+test('✍️ sign-queue-single-rule — ป้าย "รอคุณเซ็น" กับลิสต์ที่ป้ายพาไป ต้องใช้กฎเดียวกัน', () => {
+  /* 27/11 · หน้างานแจ้ง: "ทำไมแจ้งเตือนงานที่รออนุมัติ พอกดเข้ามายังเจองานที่ยังติด loop PR อยู่
+     มันยังอนุมัติไม่ได้นิ"
+     ป้ายนับถูกแล้ว (ตัดใบติดลูป PR ออกตั้งแต่ 23/11) แต่ลิงก์พาไป `?wait=<stage>`
+     = "ใบที่ค้างขั้นนี้" เฉยๆ ⇒ ไม่รู้จักทั้งกฎ "รอเราจริง" และกฎ PR ⇒ ป้ายบอก 4 เจอ 14
+     คลาสเดียวกับ ack-queue-single-rule (23/11) เป๊ะ */
+  const q = readFileSync(join(ROOT, 'src/utils/myQueue.js'), 'utf8');
+  assert.match(q, /export function signWaitsOnMe\(/,
+    '\n\n❌ ไม่มี signWaitsOnMe() ใน utils/myQueue.js — กฎ "ใบนี้รอเราเซ็นไหม" ไม่มีเจ้าของ\n');
+  assert.ok(/signWaitsOnMe\(o, me, src\.prOf/.test(q),
+    '\n\n❌ ตัวนับป้ายในคิวไม่ได้ใช้ signWaitsOnMe() — กลับไปเขียนเงื่อนไขซ้ำแล้ว\n');
+  assert.ok(/to: `\/mtn-repair\?tab=list&sign=/.test(q),
+    '\n\n❌ ลิงก์ของป้าย "รอคุณเซ็น" ไม่ได้ชี้ `?sign=<stage>`\n'
+    + '   ชี้ `?wait=` = "ใบที่ค้างขั้นนี้" ซึ่งไม่รู้จักกฎรอเราจริง/กฎ PR ⇒ เลขไม่ตรงป้ายอีกรอบ\n');
+
+  const page = stripComments(readFileSync(join(ROOT, 'src/pages/MtnRepair.jsx'), 'utf8'));
+  assert.ok(/signWaitsOnMe\(o, signMe/.test(page),
+    '\n\n❌ ตัวกรอง `?sign=` ในหน้า MO ไม่ได้ใช้ signWaitsOnMe()\n');
+  assert.ok(/actorSide: actorSideOf\(/.test(page) && /posRank: positionRank\(/.test(page),
+    '\n\n❌ ctx ของตัวกรอง `?sign=` ขาด actorSide / posRank\n'
+    + '   soleSignerFor() จะคืน false ทุกแถว (ไม่รู้ฝั่ง/ตำแหน่ง = ไม่นับ) ⇒ จอว่างเปล่าโดยไม่มีอะไรบอก\n');
+  assert.ok(/prsForLabel\(o\), fSign\)/.test(page),
+    '\n\n❌ ตัวกรอง `?sign=` ไม่ได้ส่งใบขอซื้อ (prsForLabel) ⇒ ใบที่ติดลูป PR จะปนกลับมาอีก\n');
+});

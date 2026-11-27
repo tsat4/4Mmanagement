@@ -2,7 +2,8 @@ import { useContext, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { MoreMark } from './InfoMore';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { NAV_ITEMS, STICKY_TAB_GROUPS, FULL_STICKY_GROUPS, STD_LAYOUT_GROUPS, inNavGroup } from '../App';
-import { useNavSubItemsStore } from '../utils/navSubItems';   // 🗂️ Detail Bar = รายการที่หน้าประกาศตอนรัน (พื้นที่ SAP)
+import { useNavSubItemsStore } from '../utils/navSubItems';
+import { publishNavTabs } from '../utils/navTabsLive';   // 🗂️ 27/11 แท็บของทุกหน้า → ข้อย่อยในแผงเมนู   // 🗂️ Detail Bar = รายการที่หน้าประกาศตอนรัน (พื้นที่ SAP)
 import { useMergeParams } from '../utils/useTabParam';
 import { NAV_SUB_TABS } from '../utils/navSubTabs';   // 🗂️ 24/11 หน้าที่แท็บย้ายไปเป็นข้อย่อยในแผงเมนู
 import useIsMobile from '../utils/useIsMobile';
@@ -238,6 +239,10 @@ export default function PageHeader({
      รายการมาจากหน้า (`useNavSubItems(path, tab, query, items)` — ข้อมูลจริงของแท็บนั้น ไม่เดา) · กด = ตั้ง `?<query>=` (ตัวกรองเดียวกับช่องบนจอ)
      · ตอนนี้มีเฉพาะแท็บที่จัดกลุ่มตามพื้นที่ SAP (user เลือก "แสดงเฉพาะหน้าที่มีพื้นที่ SAP") · ไม่มีรายการ = ไม่วาดแถบ
      · แถวเดียว + ◀ ▶ เมื่อล้น (`TabBar scroller`) · ตรึงบนตอนเลื่อนจอ + ปุ่ม 🔍 ท้ายแถบ */
+  /* 🗂️ 27/11 (คำสั่ง user "เมนูย่อยใน sidebar ยังมีแค่ของสโตร์"): หน้าเดี่ยวที่มีแท็บประกาศแท็บให้แผงเมนูวาดเป็นข้อย่อย (ทางลัด ?tab=)
+     ทำที่ของกลางจุดเดียว — หน้าไม่ต้องขึ้นทะเบียน · hub/หน้าลูกใน hub ไม่ประกาศ (แท็บชั้นใน ไม่ใช่ของเมนู) */
+  const tabSig = topTabs.map(t => `${t.key}\u0001${t.label}`).join('\u0002');
+  useEffect(() => { if (!inHub && navItem && topTabs.length) publishNavTabs(pathname, rawTabs); }, [inHub, !!navItem, pathname, tabSig]);   // eslint-disable-line react-hooks/exhaustive-deps
   const navLive = useNavSubItemsStore();
   const setUrl = useMergeParams();
   const detail = compactSticky ? (navLive[`${pathname}|${tab ?? ''}`] || null) : null;
